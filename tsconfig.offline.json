@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "noImplicitAny": false },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "types/offline/react-shims.d.ts"]
+}

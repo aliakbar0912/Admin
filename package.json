@@ -1,0 +1,27 @@
+{
+  "name": "devora-admin",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Owner-only admin website for the Devora central platform. Talks only to the backend API.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "node --env-file-if-exists=.env server.mjs",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --import tsx --test \"test/**/*.test.ts\"",
+    "dev": "npm run build && node --env-file-if-exists=.env server.mjs"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "esbuild": "^0.28.0",
+    "typescript": "~5.9.2"
+  }
+}
