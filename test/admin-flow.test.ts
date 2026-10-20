@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
-import { chromium, type Browser, type Page } from 'playwright';
+import { chromium, type Browser, type Locator, type Page } from 'playwright';
 import { createTestDb, SKIP_NO_PG, type TestDb } from '../../server/test/helpers.ts';
 import { loadConfig } from '../../server/src/config.ts';
 import { createServer } from '../../server/src/app.ts';
@@ -161,21 +161,35 @@ describe('admin website, end to end', () => {
     await p.close();
   });
 
-  test('a device enrolls with a code shown once, and the code is not shown again after leaving', async (t) => {
+  test('a desktop connects on its own and shows up under Devices; the owner can block and unblock it', async (t) => {
     if (!tdb || !browser) return t.skip(SKIP_NO_PG);
+    const register = () =>
+      fetch(`${apiUrl}/v1/devices/register`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ installId: 'browser-laptop-install-01', deviceName: 'Browser laptop' }) });
+    const first = await register();
+    assert.equal(first.status, 201);
     const p = await page();
     await signIn(p);
     await p.goto(`${adminUrl}/#/devices`);
-    await p.getByLabel('Label').fill('Browser laptop');
-    await p.getByRole('button', { name: 'Create enrollment code' }).click();
-    await confirmPasswordIfAsked(p);
-    const code = (await p.getByTestId('enroll-code').textContent())?.trim() ?? '';
-    assert.match(code, /^[A-Z2-9]{4}(-[A-Z2-9]{4}){3}$/);
+    const row = p.getByRole('row', { name: /Browser laptop/ });
+    await row.getByText('active').waitFor();
+    assert.equal(await p.getByText('enrollment code', { exact: false }).count(), 0, 'no enrollment codes anywhere');
     await p.screenshot({ path: path.join(SHOTS, '05-devices.png'), fullPage: true });
-    const enroll = await fetch(`${apiUrl}/v1/devices/enroll`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ code, deviceName: 'Browser laptop' }) });
-    assert.equal(enroll.status, 201);
-    deviceToken = ((await enroll.json()) as any).token;
-    await p.getByRole('button', { name: 'Done' }).click();
+
+    await row.getByRole('button', { name: 'Block' }).click();
+    const dialog = p.getByRole('dialog', { name: /Block Browser laptop/ });
+    await dialog.getByLabel('Type "Browser laptop" to confirm').fill('Browser laptop');
+    await dialog.getByRole('button', { name: 'Block computer' }).click();
+    await confirmPasswordIfAsked(p, p.getByText('Browser laptop was blocked.'));
+    await p.getByText('Browser laptop was blocked.').waitFor();
+    await row.getByText('blocked').waitFor();
+    assert.equal((await register()).status, 403, 'a blocked installation cannot connect again');
+
+    await row.getByRole('button', { name: 'Unblock' }).click();
+    await confirmPasswordIfAsked(p, p.getByText(/Browser laptop is allowed again/));
+    await p.getByText(/Browser laptop is allowed again/).waitFor();
+    const again = await register();
+    assert.equal(again.status, 200);
+    deviceToken = ((await again.json()) as any).token;
     await p.close();
   });
 
@@ -257,10 +271,10 @@ describe('admin website, end to end', () => {
 });
 
 /** Sensitive changes ask for the password again. Answer the prompt when it appears. */
-async function confirmPasswordIfAsked(p: Page): Promise<void> {
+async function confirmPasswordIfAsked(p: Page, result: Locator): Promise<void> {
   // Wait for whichever comes first: the password prompt, or the thing the action was meant to produce.
   const dialog = p.getByRole('dialog', { name: 'Confirm your password' });
-  await dialog.or(p.getByTestId('enroll-code')).first().waitFor({ timeout: 10_000 });
+  await dialog.or(result).first().waitFor({ timeout: 10_000 });
   if (await dialog.isVisible()) {
     await dialog.getByLabel('Password').fill(OWNER_PASSWORD);
     await dialog.getByRole('button', { name: 'Confirm' }).click();

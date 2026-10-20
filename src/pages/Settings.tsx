@@ -7,6 +7,7 @@ interface Settings {
   maxConcurrentPerDevice: number;
   maxOutputTokens: number;
   allowDirectProvider: boolean;
+  allowAutoRegistration: boolean;
 }
 
 export function Settings() {
@@ -42,6 +43,17 @@ export function Settings() {
     }
   };
 
+  const toggleRegistration = async (on: boolean) => {
+    setMessage(null);
+    try {
+      const saved: Settings = await api('PATCH', '/admin/api/settings', { allowAutoRegistration: on });
+      setForm(saved);
+      setMessage({ kind: 'success', text: on ? 'New computers can connect.' : 'New computers cannot connect. Computers already listed under Devices keep working.' });
+    } catch (err) {
+      setMessage({ kind: 'error', text: err instanceof ApiError ? err.message : 'Could not change the setting.' });
+    }
+  };
+
   const toggleDirect = async (on: boolean) => {
     setMessage(null);
     try {
@@ -71,6 +83,13 @@ export function Settings() {
             <Button type="submit" variant="primary" disabled={busy}>{busy ? 'Saving…' : 'Save limits'}</Button>
           </div>
         </form>
+      </Card>
+
+      <Card title="New computers">
+        <p>Desktop apps connect on their own the first time they open. Turn this off to stop new computers from connecting, for example if the app was shared too widely. Computers already listed under Devices keep working, and you can block any of them.</p>
+        <label className="check">
+          <input type="checkbox" checked={form.allowAutoRegistration} onChange={(e) => toggleRegistration(e.target.checked)} /> Allow new computers to connect
+        </label>
       </Card>
 
       <Card title="Direct-provider mode (owner only)">
