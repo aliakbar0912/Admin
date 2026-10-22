@@ -12,6 +12,7 @@ interface Device {
   modelAccess: 'all' | 'selected';
   registeredVia: 'code' | 'auto';
   grantedModels: number;
+  memories: number;
 }
 interface ModelOption {
   id: string;
@@ -47,12 +48,13 @@ export function Devices() {
       {error && <Notice kind="error">{error}</Notice>}
       {message && <Notice kind="success">{message}</Notice>}
       <h2 className="section-title">Desktops</h2>
-      <Table head={['Name', 'Status', 'Models', 'Connected', 'Last seen', 'Actions']} rows={devices.data?.devices.length ?? 0} empty="No desktop has connected yet. Open the desktop app once and it appears here.">
+      <Table head={['Name', 'Status', 'Models', 'Memory', 'Connected', 'Last seen', 'Actions']} rows={devices.data?.devices.length ?? 0} empty="No desktop has connected yet. Open the desktop app once and it appears here.">
         {devices.data?.devices.map((d) => (
           <tr key={d.id}>
             <td><strong>{d.name}</strong></td>
             <td>{d.status === 'active' ? <Badge tone="ok">active</Badge> : <Badge tone="bad">blocked</Badge>}</td>
             <td className="small">{d.modelAccess === 'all' ? 'All enabled models' : `${d.grantedModels} selected`}</td>
+            <td className="small">{d.memories > 0 ? <a href={`#/memory`}>{d.memories}</a> : <span className="muted">0</span>}</td>
             <td className="small">{when(d.createdAt)}</td>
             <td className="small">{when(d.lastSeenAt)}</td>
             <td className="actions">

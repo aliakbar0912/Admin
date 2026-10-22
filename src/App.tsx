@@ -6,6 +6,7 @@ import { Overview } from './pages/Overview.tsx';
 import { Providers } from './pages/Providers.tsx';
 import { Models } from './pages/Models.tsx';
 import { Devices } from './pages/Devices.tsx';
+import { Memory } from './pages/Memory.tsx';
 import { Usage } from './pages/Usage.tsx';
 import { Settings } from './pages/Settings.tsx';
 
@@ -14,6 +15,7 @@ const PAGES = [
   { id: 'providers', label: 'Providers' },
   { id: 'models', label: 'Models' },
   { id: 'devices', label: 'Devices' },
+  { id: 'memory', label: 'Memory' },
   { id: 'usage', label: 'Usage & logs' },
   { id: 'settings', label: 'Settings' },
 ] as const;
@@ -84,6 +86,7 @@ export function App() {
         {page === 'providers' && <Providers />}
         {page === 'models' && <Models />}
         {page === 'devices' && <Devices />}
+        {page === 'memory' && <Memory />}
         {page === 'usage' && <Usage />}
         {page === 'settings' && <Settings />}
       </main>
