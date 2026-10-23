@@ -73,3 +73,36 @@ export function when(iso: string | null | undefined): string {
   const d = new Date(iso);
   return Number.isNaN(d.getTime()) ? '—' : d.toLocaleString();
 }
+
+/** Uploads one piece of a file as raw bytes (release installers). Same session, CSRF and error handling as api(). */
+export async function uploadPiece<T = any>(path: string, piece: Blob): Promise<T> {
+  if (!origin) throw new ApiError(0, 'not_configured', 'The admin site has no API address.');
+  let res: Response;
+  try {
+    res = await fetch(origin + path, { method: 'PUT', headers: { accept: 'application/json', 'content-type': 'application/octet-stream', 'x-csrf-token': csrf }, credentials: 'include', body: piece });
+  } catch {
+    throw new ApiError(0, 'network', 'The upload was interrupted. Check your connection.');
+  }
+  const data: any = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    if (res.status === 401 && unauthorized) unauthorized();
+    throw new ApiError(res.status, data?.error?.code ?? 'error', data?.error?.message ?? `upload failed (${res.status})`);
+  }
+  return data as T;
+}
+
+export function bytes(n: number): string {
+  if (!n) return '—';
+  return n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : n >= 1024 ? `${Math.round(n / 1024)} KB` : `${n} B`;
+}
+
+export function ago(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return '—';
+  const s = Math.round((Date.now() - t) / 1000);
+  if (s < 60) return 'just now';
+  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)} h ago`;
+  return `${Math.floor(s / 86400)} d ago`;
+}

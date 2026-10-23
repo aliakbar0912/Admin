@@ -151,7 +151,7 @@ input, select {
   width: 100%;
   min-width: 0;
 }
-input[type='checkbox'] { width: auto; }
+input[type='checkbox'], input[type='radio'] { width: auto; }
 .field { display: flex; flex-direction: column; gap: 4px; }
 .field-label { font-weight: 600; font-size: 0.92rem; }
 .field-hint { color: var(--muted); font-size: 0.82rem; }
@@ -269,3 +269,11 @@ fieldset { margin: 0; }
   .content { padding: 18px 16px 48px; }
   .caps { grid-template-columns: 1fr; }
 }
+
+/* Device model access */
+.radio { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+.check-list { margin-top: 10px; max-height: 320px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
+.check-list .check { padding: 4px 0; flex-wrap: wrap; }
+
+/* Memory page */
+.memory-content { max-width: 560px; overflow-wrap: anywhere; }

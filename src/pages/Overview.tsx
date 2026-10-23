@@ -1,4 +1,4 @@
-import { api, when } from '../api.ts';
+import { ago, api, when } from '../api.ts';
 import { Badge, Card, Page, Spinner, Stat, useLoad } from '../ui.tsx';
 
 interface OverviewData {
@@ -29,8 +29,12 @@ const HEALTH_TONE: Record<HealthData['status'], 'ok' | 'bad' | undefined> = { ok
 export function Overview() {
   const { data, error, loading, reload } = useLoad<OverviewData>(() => api('GET', '/admin/api/overview'));
   const health = useLoad<HealthData>(() => api('GET', '/admin/api/health'));
+  const releases = useLoad<{ releases: { version: string; status: string; mandatory: boolean; publishedAt: string | null }[]; adoption: { version: string; devices: number }[] }>(() => api('GET', '/admin/api/releases'));
+  const failures = useLoad<{ logs: { id: number; createdAt: string; deviceName: string | null; modelName: string; errorCode: string | null; httpStatus: number }[] }>(() => api('GET', '/admin/api/logs?status=error&limit=5'));
+  const latest = releases.data?.releases.find((r) => r.status === 'published') ?? null;
+  const total = releases.data?.adoption.reduce((n, a) => n + a.devices, 0) ?? 0;
   return (
-    <Page title="Overview" intro="Live status of the central service. Figures cover the last 24 hours." actions={<button className="btn btn-secondary" onClick={() => { reload(); health.reload(); }}>Refresh</button>}>
+    <Page title="Overview" intro="Live status of the central service. Figures cover the last 24 hours." actions={<button className="btn btn-secondary" onClick={() => { reload(); health.reload(); releases.reload(); failures.reload(); }}>Refresh</button>}>
       {loading && !data && <Spinner />}
       {error && <p className="notice notice-error" role="alert">{error}</p>}
       {data && (
@@ -42,6 +46,56 @@ export function Overview() {
             <Stat label="95th percentile" value={data.p95Ms === null ? '—' : `${data.p95Ms} ms`} />
             <Stat label="Active devices" value={data.devicesActive} />
             <Stat label="Enabled models" value={data.modelsEnabled} hint={`${data.providersEnabled} of ${data.providersTotal} providers enabled`} />
+          </div>
+          <div className="two-col">
+            <Card title="Desktop app">
+              <ul className="plain-list">
+                <li>
+                  <strong>Latest version</strong>{' '}
+                  {latest ? (
+                    <>
+                      <Badge tone="ok">{latest.version}</Badge>
+                      {latest.mandatory && <> <Badge tone="warn">required</Badge></>}
+                      <span className="muted small"> · released {ago(latest.publishedAt)}</span>
+                    </>
+                  ) : (
+                    <span className="muted small">no update published yet · <a href="#/updates">publish one</a></span>
+                  )}
+                </li>
+                {total > 0 && (
+                  <li>
+                    <strong>On the latest version</strong>{' '}
+                    <span className="small">
+                      {latest ? `${releases.data!.adoption.find((a) => a.version === latest.version)?.devices ?? 0} of ${total} computers` : `${total} computers`}
+                    </span>
+                    <div className="bars compact">
+                      {releases.data!.adoption.slice(0, 4).map((a) => (
+                        <div key={a.version} className="bar-row">
+                          <span className="bar-label mono">{a.version}</span>
+                          <span className="bar"><span style={{ width: `${Math.max(3, (a.devices / total) * 100)}%` }} /></span>
+                          <span className="bar-value">{a.devices}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </li>
+                )}
+              </ul>
+            </Card>
+            <Card title="Recent failed requests">
+              {failures.data && failures.data.logs.length === 0 ? (
+                <p className="muted">No failed requests. </p>
+              ) : (
+                <ul className="plain-list">
+                  {failures.data?.logs.map((l) => (
+                    <li key={l.id} className="small">
+                      <Badge tone="bad">{l.errorCode ?? `HTTP ${l.httpStatus}`}</Badge> <strong>{l.modelName}</strong>
+                      <span className="muted"> · {l.deviceName ?? 'unknown computer'} · {ago(l.createdAt)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="small"><a href="#/usage">All requests and logs</a></p>
+            </Card>
           </div>
           <Card title="Service health">
             {health.error && <p className="notice notice-error" role="alert">{health.error}</p>}

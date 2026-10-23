@@ -9,16 +9,38 @@ import { Devices } from './pages/Devices.tsx';
 import { Memory } from './pages/Memory.tsx';
 import { Usage } from './pages/Usage.tsx';
 import { Settings } from './pages/Settings.tsx';
+import { Updates } from './pages/Updates.tsx';
+import { Icon } from './ui.tsx';
 
 const PAGES = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'providers', label: 'Providers' },
-  { id: 'models', label: 'Models' },
-  { id: 'devices', label: 'Devices' },
-  { id: 'memory', label: 'Memory' },
-  { id: 'usage', label: 'Usage & logs' },
-  { id: 'settings', label: 'Settings' },
+  { id: 'overview', label: 'Overview', icon: 'home', group: 'Monitor' },
+  { id: 'usage', label: 'Usage & logs', icon: 'chart', group: 'Monitor' },
+  { id: 'providers', label: 'Providers', icon: 'plug', group: 'AI' },
+  { id: 'models', label: 'Models', icon: 'cube', group: 'AI' },
+  { id: 'devices', label: 'Devices', icon: 'monitor', group: 'Desktop app' },
+  { id: 'updates', label: 'Updates', icon: 'download', group: 'Desktop app' },
+  { id: 'memory', label: 'Memory', icon: 'brain', group: 'Desktop app' },
+  { id: 'settings', label: 'Settings', icon: 'sliders', group: 'Server' },
 ] as const;
+const GROUPS = ['Monitor', 'AI', 'Desktop app', 'Server'] as const;
+type Theme = 'system' | 'light' | 'dark';
+function loadTheme(): Theme {
+  try {
+    const t = localStorage.getItem('devora-admin-theme');
+    return t === 'light' || t === 'dark' ? t : 'system';
+  } catch {
+    return 'system';
+  }
+}
+function applyTheme(t: Theme) {
+  if (t === 'system') delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = t;
+  try {
+    localStorage.setItem('devora-admin-theme', t);
+  } catch {
+    /* storage unavailable */
+  }
+}
 type PageId = (typeof PAGES)[number]['id'];
 
 function currentPage(): PageId {
@@ -32,6 +54,8 @@ export function App() {
   const [session, setSession] = useState<Session>({ status: 'loading' });
   const [page, setPage] = useState<PageId>(currentPage());
   const [reauth, setReauth] = useState<{ resolve: (ok: boolean) => void } | null>(null);
+  const [theme, setTheme] = useState<Theme>(loadTheme());
+  useEffect(() => applyTheme(theme), [theme]);
 
   useEffect(() => {
     const onHash = () => setPage(currentPage());
@@ -65,17 +89,38 @@ export function App() {
   return (
     <div className="shell">
       <aside className="sidebar">
-        <div className="brand">Devora admin</div>
+        <div className="brand">
+          <span className="brand-mark" aria-hidden="true">D</span>
+          <span>Devora admin</span>
+        </div>
         <nav aria-label="Main">
-          {PAGES.map((p) => (
-            <button key={p.id} className={`nav-item${page === p.id ? ' nav-active' : ''}`} aria-current={page === p.id ? 'page' : undefined} onClick={() => go(p.id)}>
-              {p.label}
-            </button>
+          {GROUPS.map((g) => (
+            <div key={g} className="nav-group">
+              <div className="nav-group-label">{g}</div>
+              {PAGES.filter((p) => p.group === g).map((p) => (
+                <button key={p.id} className={`nav-item${page === p.id ? ' nav-active' : ''}`} aria-current={page === p.id ? 'page' : undefined} onClick={() => go(p.id)}>
+                  <Icon name={p.icon} />
+                  <span>{p.label}</span>
+                </button>
+              ))}
+            </div>
           ))}
         </nav>
         <div className="sidebar-foot">
-          <div className="muted small">Signed in as</div>
-          <div className="small owner">{session.email}</div>
+          <div className="theme-switch" role="radiogroup" aria-label="Theme">
+            {(['system', 'light', 'dark'] as Theme[]).map((t) => (
+              <button key={t} role="radio" aria-checked={theme === t} className={theme === t ? 'on' : ''} title={`${t[0].toUpperCase()}${t.slice(1)} theme`} onClick={() => setTheme(t)}>
+                <Icon name={t === 'system' ? 'monitor' : t === 'light' ? 'sun' : 'moon'} />
+              </button>
+            ))}
+          </div>
+          <div className="owner-box">
+            <span className="avatar" aria-hidden="true">{session.email.slice(0, 1).toUpperCase()}</span>
+            <div className="owner-text">
+              <div className="muted small">Signed in as</div>
+              <div className="small owner">{session.email}</div>
+            </div>
+          </div>
           <Button variant="ghost" small onClick={() => signOut(() => setSession({ status: 'out' }))}>
             Sign out
           </Button>
@@ -88,6 +133,7 @@ export function App() {
         {page === 'devices' && <Devices />}
         {page === 'memory' && <Memory />}
         {page === 'usage' && <Usage />}
+        {page === 'updates' && <Updates />}
         {page === 'settings' && <Settings />}
       </main>
       {reauth && <ReauthDialog onDone={(ok) => { reauth.resolve(ok); setReauth(null); }} />}
@@ -127,6 +173,7 @@ function SignIn(props: { onSignedIn: (email: string) => void }) {
   return (
     <div className="signin">
       <form className="signin-card" onSubmit={submit} aria-label="Sign in">
+        <span className="brand-mark lg" aria-hidden="true">D</span>
         <h1>Devora admin</h1>
         <p className="intro">Owner access only. Sign in with the owner email and password.</p>
         <Field label="Email">

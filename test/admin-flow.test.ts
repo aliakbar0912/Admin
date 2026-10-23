@@ -244,6 +244,36 @@ describe('admin website, end to end', () => {
     await p.close();
   });
 
+  test('the owner uploads and publishes a desktop update; the overview shows it', async (t) => {
+    if (!tdb || !browser) return t.skip(SKIP_NO_PG);
+    const p = await page();
+    await signIn(p);
+    await p.getByRole('button', { name: 'Updates' }).click();
+    await p.getByRole('heading', { name: 'Updates', exact: true }).waitFor();
+    await p.getByText('No releases yet.', { exact: false }).waitFor();
+    await p.getByRole('button', { name: 'New release' }).click();
+    const dialog = p.getByRole('dialog', { name: 'New release' });
+    await dialog.getByLabel('Version').fill('0.2.0');
+    await dialog.getByLabel("What's new").fill('- Faster agent');
+    // A small fake installer that spans two upload pieces (4 MB each).
+    const exe = Buffer.concat([Buffer.from('MZ'), crypto.randomBytes(5 * 1024 * 1024)]);
+    await dialog.getByLabel('Installer (.exe)').setInputFiles({ name: 'Devora-Setup-0.2.0.exe', mimeType: 'application/octet-stream', buffer: exe });
+    await dialog.getByRole('button', { name: 'Create and publish' }).click();
+    await confirmPasswordIfAsked(p, p.getByText('0.2.0 is published', { exact: false }));
+    await p.getByText('0.2.0 is published', { exact: false }).waitFor({ timeout: 30_000 });
+    const row = p.getByRole('row', { name: /0\.2\.0/ });
+    await row.getByText('published').waitFor();
+    await row.getByText('5.0 MB').waitFor();
+    await p.screenshot({ path: path.join(SHOTS, '08-updates.png'), fullPage: true });
+    // The desktop side sees it.
+    const check = await fetch(`${apiUrl}/v1/updates/check?current=0.1.0`, { headers: { authorization: `Bearer ${deviceToken}` } });
+    assert.equal(((await check.json()) as any).update.version, '0.2.0');
+    await p.getByRole('button', { name: 'Overview' }).click();
+    await p.locator('li', { has: p.locator('strong', { hasText: /^Latest version$/ }) }).getByText('0.2.0').waitFor();
+    await p.screenshot({ path: path.join(SHOTS, '09-overview.png'), fullPage: true });
+    await p.close();
+  });
+
   test('a phone-width screen has no horizontal scrolling and keeps the gutter', async (t) => {
     if (!tdb || !browser) return t.skip(SKIP_NO_PG);
     const p = await page(390, 844);
