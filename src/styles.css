@@ -334,3 +334,12 @@ a { color: var(--accent); }
   .sidebar nav { gap: 2px; }
   .owner-box { display: none; }
 }
+
+/* Users page */
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 12px; }
+.toolbar input[type='search'] { flex: 1 1 220px; min-width: 0; }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0 0 16px; }
+.facts dt { color: var(--muted, inherit); opacity: 0.8; }
+.facts dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.danger-zone { margin-top: 16px; padding: 12px; border: 1px solid var(--bad); border-radius: 8px; background: var(--bad-bg); }
+.danger-zone p { margin-top: 0; }

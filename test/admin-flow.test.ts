@@ -17,6 +17,7 @@ import { hashPassword } from '../../server/src/crypto.ts';
 import { loadMigrations, migrateUp } from '../../server/src/db/migrate.ts';
 import { startMockOpenAI, type MockServer } from '../../tests/fixtures/mock-openai.ts';
 import { createAdminServer } from '../server.mjs';
+import { startPocketBase, type TestPocketBase } from '../../server/test/pocketbase-helper.ts';
 
 const SHOTS = process.env.DEVORA_SHOTS_DIR ?? path.join(process.env.TMPDIR ?? '/tmp', 'devora-admin-shots');
 const OWNER_EMAIL = 'owner@example.test';
@@ -30,6 +31,7 @@ let mock: MockServer;
 let browser: Browser | null = null;
 let redis: Redis | null = null;
 let deviceToken = '';
+let pbt: TestPocketBase | null = null;
 const consoleErrors: string[] = [];
 
 const ADMIN_PORT = 21000 + Math.floor(Math.random() * 5000);
@@ -45,7 +47,10 @@ before(async () => {
   mock = await startMockOpenAI({ requireKey: UPSTREAM_KEY, models: ['mock-coder', 'mock-vision'], script: () => ({ content: 'ok' }) });
   // With DEVORA_TEST_REDIS_URL set, the backend keeps its rate limits in that Redis, as in production.
   const redisUrl = process.env.DEVORA_TEST_REDIS_URL;
+  // A real throwaway PocketBase for the Users page, when the test binary is available.
+  pbt = await startPocketBase();
   const config = loadConfig({
+      ...(pbt ? { POCKETBASE_URL: pbt.url, POCKETBASE_ADMIN_EMAIL: pbt.adminEmail, POCKETBASE_ADMIN_PASSWORD: pbt.adminPassword, PUBLIC_API_ORIGIN: apiUrl } : {}),
       DEVORA_ENV: 'development',
       DATABASE_URL: `postgres://${tdb.config.user}:${encodeURIComponent(tdb.config.password)}@${tdb.config.host}:${tdb.config.port}/${tdb.config.database}`,
       DEVORA_SECRET_KEYS: `1=${crypto.randomBytes(32).toString('base64')}`,
@@ -73,9 +78,22 @@ after(async () => {
   await new Promise<void>((r) => (admin ? admin.close(() => r()) : r()));
   await new Promise<void>((r) => (api ? (api.closeAllConnections?.(), api.close(() => r())) : r()));
   await mock?.close();
+  await pbt?.stop();
   await redis?.close();
   await tdb?.drop();
 });
+
+/** Sensitive changes ask for the password unless it was confirmed recently. */
+async function confirmIfAsked(p: Page, successText: string): Promise<void> {
+  const dialog = p.getByRole('dialog', { name: 'Confirm your password' });
+  const ok = p.getByText(successText);
+  await Promise.race([dialog.waitFor(), ok.waitFor()]);
+  if (await dialog.isVisible()) {
+    await dialog.getByLabel('Password').fill(OWNER_PASSWORD);
+    await dialog.getByRole('button', { name: 'Confirm' }).click();
+  }
+  await ok.waitFor();
+}
 
 async function page(width = 1280, height = 900): Promise<Page> {
   const p = await browser!.newPage({ viewport: { width, height } });
@@ -271,6 +289,52 @@ describe('admin website, end to end', () => {
     await p.getByRole('button', { name: 'Overview' }).click();
     await p.locator('li', { has: p.locator('strong', { hasText: /^Latest version$/ }) }).getByText('0.2.0').waitFor();
     await p.screenshot({ path: path.join(SHOTS, '09-overview.png'), fullPage: true });
+    await p.close();
+  });
+
+  test('the owner sees Devora users, blocks one, and can require sign-in for Devora AI', async (t) => {
+    if (!tdb || !browser) return t.skip(SKIP_NO_PG);
+    if (!pbt) return t.skip('no PocketBase test binary');
+    await pbt.createUser('ayesha@example.test', 'ayesha-pass-1', { name: 'Ayesha' });
+    const pbToken = await pbt.passwordToken('ayesha@example.test', 'ayesha-pass-1');
+    const signedIn = await fetch(`${apiUrl}/v1/auth/session`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ pbToken, installId: crypto.randomBytes(18).toString('base64url'), deviceName: 'Ayesha laptop' }),
+    });
+    assert.equal(signedIn.status, 200);
+    const userToken = ((await signedIn.json()) as any).token as string;
+
+    const p = await page();
+    await signIn(p);
+    await p.goto(`${adminUrl}/#/users`);
+    await p.getByRole('heading', { name: 'Users' }).waitFor();
+    const row = p.locator('tr', { hasText: 'ayesha@example.test' });
+    await row.waitFor();
+    await row.getByText('verified', { exact: true }).waitFor();
+    await p.screenshot({ path: path.join(SHOTS, '08-users.png'), fullPage: true });
+    await row.getByRole('button', { name: 'Manage' }).click();
+    const dialog = p.getByRole('dialog', { name: 'Ayesha' });
+    await dialog.getByText('Ayesha laptop').waitFor();
+    await dialog.getByRole('button', { name: 'Block account' }).click();
+    await confirmIfAsked(p, 'is blocked and signed out everywhere');
+    await p.locator('tr', { hasText: 'ayesha@example.test' }).getByText('blocked', { exact: true }).waitFor();
+    assert.equal((await fetch(`${apiUrl}/v1/catalogue`, { headers: { authorization: `Bearer ${userToken}` } })).status, 401);
+
+    await p.goto(`${adminUrl}/#/settings`);
+    const box = p.getByLabel('Require sign-in for Devora AI');
+    await box.waitFor();
+    assert.equal(await box.isChecked(), false, 'off by default');
+    await box.click();
+    await confirmIfAsked(p, 'Sign-in is now required for Devora AI');
+    const reg = await fetch(`${apiUrl}/v1/devices/register`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ installId: crypto.randomBytes(18).toString('base64url'), deviceName: 'No account PC' }) });
+    const legacyToken = ((await reg.json()) as any).token as string;
+    const legacy = await fetch(`${apiUrl}/v1/catalogue`, { headers: { authorization: `Bearer ${legacyToken}` } });
+    assert.equal(legacy.status, 403);
+    await p.screenshot({ path: path.join(SHOTS, '09a-settings-required.png'), fullPage: true });
+    await p.getByLabel('Require sign-in for Devora AI').click({ timeout: 5000 });
+    await confirmIfAsked(p, 'works without an account again');
+    await p.screenshot({ path: path.join(SHOTS, '09-settings-accounts.png'), fullPage: true });
     await p.close();
   });
 

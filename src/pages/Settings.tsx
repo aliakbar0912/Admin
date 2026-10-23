@@ -8,6 +8,8 @@ interface Settings {
   maxOutputTokens: number;
   allowDirectProvider: boolean;
   allowAutoRegistration: boolean;
+  requireLoginForCentralAi: boolean;
+  accountsConfigured?: boolean;
 }
 
 export function Settings() {
@@ -54,6 +56,22 @@ export function Settings() {
     }
   };
 
+  const toggleLogin = async (on: boolean) => {
+    setMessage(null);
+    try {
+      const saved: Settings = await sensitive(() => api('PATCH', '/admin/api/settings', { requireLoginForCentralAi: on }));
+      setForm(saved);
+      setMessage({
+        kind: 'success',
+        text: on
+          ? 'Sign-in is now required for Devora AI. Computers without an account keep local features and updates, and are asked to sign in.'
+          : 'Devora AI works without an account again.',
+      });
+    } catch (err) {
+      setMessage({ kind: 'error', text: err instanceof ApiError ? err.message : 'Could not change the setting.' });
+    }
+  };
+
   const toggleDirect = async (on: boolean) => {
     setMessage(null);
     try {
@@ -89,6 +107,22 @@ export function Settings() {
         <p>Desktop apps connect on their own the first time they open. Turn this off to stop new computers from connecting, for example if the app was shared too widely. Computers already listed under Devices keep working, and you can block any of them.</p>
         <label className="check">
           <input type="checkbox" checked={form.allowAutoRegistration} onChange={(e) => toggleRegistration(e.target.checked)} /> Allow new computers to connect
+        </label>
+      </Card>
+
+      <Card title="Devora accounts">
+        {form.accountsConfigured ? (
+          <p>
+            People can sign in to the desktop app with email and password, Google or GitHub (whichever are enabled in PocketBase). With the option below
+            <strong> off</strong>, sign-in is optional and every computer keeps working as before. With it <strong>on</strong>, the server refuses central AI
+            (chat, models, memory sync, usage) to computers without a signed-in, verified account. Local work and app updates are never blocked. Changing it
+            asks for your password.
+          </p>
+        ) : (
+          <p className="muted">Accounts are not set up on this server (POCKETBASE_URL and the PocketBase superuser are missing), so sign-in cannot be required.</p>
+        )}
+        <label className="check">
+          <input type="checkbox" checked={form.requireLoginForCentralAi} disabled={!form.accountsConfigured && !form.requireLoginForCentralAi} onChange={(e) => toggleLogin(e.target.checked)} /> Require sign-in for Devora AI
         </label>
       </Card>
 
