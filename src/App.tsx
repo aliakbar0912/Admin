@@ -13,6 +13,9 @@ import { Updates } from './pages/Updates.tsx';
 import { Users } from './pages/Users.tsx';
 import { WebSearch } from './pages/WebSearch.tsx';
 import { Skills } from './pages/Skills.tsx';
+import { ApiKeys } from './pages/ApiKeys.tsx';
+import { Agents } from './pages/Agents.tsx';
+import { Desktop } from './pages/Desktop.tsx';
 import { Icon } from './ui.tsx';
 
 const PAGES = [
@@ -22,13 +25,16 @@ const PAGES = [
   { id: 'models', label: 'Models', icon: 'cube', group: 'AI' },
   { id: 'search', label: 'Web search', icon: 'search', group: 'AI' },
   { id: 'skills', label: 'Skills', icon: 'spark', group: 'AI' },
+  { id: 'agents', label: 'Agents', icon: 'bot', group: 'AI' },
+  { id: 'apikeys', label: 'API keys', icon: 'key', group: 'API' },
   { id: 'users', label: 'Users', icon: 'user', group: 'Desktop app' },
   { id: 'devices', label: 'Devices', icon: 'monitor', group: 'Desktop app' },
+  { id: 'desktop', label: 'Desktop config', icon: 'screen', group: 'Desktop app' },
   { id: 'updates', label: 'Updates', icon: 'download', group: 'Desktop app' },
   { id: 'memory', label: 'Memory', icon: 'brain', group: 'Desktop app' },
   { id: 'settings', label: 'Settings', icon: 'sliders', group: 'Server' },
 ] as const;
-const GROUPS = ['Monitor', 'AI', 'Desktop app', 'Server'] as const;
+const GROUPS = ['Monitor', 'AI', 'API', 'Desktop app', 'Server'] as const;
 type Theme = 'system' | 'light' | 'dark';
 function loadTheme(): Theme {
   try {
@@ -138,8 +144,11 @@ export function App() {
         {page === 'models' && <Models />}
         {page === 'search' && <WebSearch />}
         {page === 'skills' && <Skills />}
+        {page === 'agents' && <Agents />}
+        {page === 'apikeys' && <ApiKeys />}
         {page === 'users' && <Users />}
         {page === 'devices' && <Devices />}
+        {page === 'desktop' && <Desktop />}
         {page === 'memory' && <Memory />}
         {page === 'usage' && <Usage />}
         {page === 'updates' && <Updates />}

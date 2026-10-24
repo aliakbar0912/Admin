@@ -10,6 +10,8 @@ interface OverviewData {
   failed24h: number;
   p50Ms: number | null;
   p95Ms: number | null;
+  apiKeysEnabled: number;
+  orgAgentsEnabled: number;
   providers: { name: string; enabled: boolean; lastTestOk: boolean | null; lastTestAt: string | null; lastTestMessage: string | null }[];
 }
 
@@ -46,6 +48,8 @@ export function Overview() {
             <Stat label="95th percentile" value={data.p95Ms === null ? '—' : `${data.p95Ms} ms`} />
             <Stat label="Active devices" value={data.devicesActive} />
             <Stat label="Enabled models" value={data.modelsEnabled} hint={`${data.providersEnabled} of ${data.providersTotal} providers enabled`} />
+            <Stat label="API keys" value={data.apiKeysEnabled} hint={<a href="#/apikeys">manage keys</a>} />
+            <Stat label="Org agents" value={data.orgAgentsEnabled} hint={<a href="#/agents">manage agents</a>} />
           </div>
           <div className="two-col">
             <Card title="Desktop app">
