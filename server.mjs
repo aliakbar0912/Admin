@@ -3,6 +3,7 @@
 // so the same build works on any domain: changing ADMIN_API_ORIGIN needs a restart, never a rebuild.
 // Environment:
 //   ADMIN_API_ORIGIN  the API origin, for example https://api.YOUR_DOMAIN   (required)
+//   ADMIN_API_KEY     the API_ACCESS_KEY of the API server, sent as x-api-key on every call
 //   PORT              default 8081
 //   HOST              default 0.0.0.0
 //   ADMIN_HSTS        "true" to send Strict-Transport-Security (default true in production)
@@ -52,10 +53,11 @@ export function loadAdminConfig(env = process.env) {
     port,
     host: env.HOST || '0.0.0.0',
     hsts: flag(env.ADMIN_HSTS, production, 'ADMIN_HSTS'),
+    apiKey: (env.ADMIN_API_KEY ?? '').trim(),
   };
 }
 
-export function createAdminServer({ apiOrigin: api, hsts = false }) {
+export function createAdminServer({ apiOrigin: api, hsts = false, apiKey = '' }) {
   const csp = [
     "default-src 'self'",
     "script-src 'self'",
@@ -93,7 +95,7 @@ export function createAdminServer({ apiOrigin: api, hsts = false }) {
     }
     if (pathname === '/config.js') {
       res.writeHead(200, { ...headers, 'content-type': 'text/javascript; charset=utf-8' });
-      return res.end(`window.__DEVORA_ADMIN_CONFIG__ = ${JSON.stringify({ apiOrigin: api })};\n`);
+      return res.end(`window.__DEVORA_ADMIN_CONFIG__ = ${JSON.stringify({ apiOrigin: api, apiKey })};\n`);
     }
     const entry = files.get(pathname);
     if (!entry) {
@@ -120,7 +122,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     process.stderr.write(`configuration error: ${e instanceof Error ? e.message : String(e)}\n`);
     process.exit(1);
   }
-  const server = createAdminServer({ apiOrigin: cfg.apiOrigin, hsts: cfg.hsts });
+  const server = createAdminServer({ apiOrigin: cfg.apiOrigin, hsts: cfg.hsts, apiKey: cfg.apiKey });
   server.listen(cfg.port, cfg.host, () => process.stdout.write(`admin site on ${cfg.host}:${cfg.port}, API ${cfg.apiOrigin}${cfg.production ? ' (production)' : ''}\n`));
   const stop = () => server.close(() => process.exit(0));
   process.on('SIGTERM', stop);
