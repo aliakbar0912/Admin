@@ -55,7 +55,7 @@ export function Card(props: { title?: string; children: ReactNode; footer?: Reac
   );
 }
 
-export function Stat(props: { label: string; value: ReactNode; hint?: ReactNode }) {
+export function Stat(props: { label: string; value: ReactNode; hint?: string }) {
   return (
     <div className="stat">
       <div className="stat-label">{props.label}</div>
@@ -179,9 +179,6 @@ const ICONS: Record<string, string> = {
   spark: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z',
   search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4.2-4.2',
   user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',
-  key: 'M14.5 3a6.5 6.5 0 1 0-2.9 12.3L10 17H7v3H4v-3l6.7-6.7A6.5 6.5 0 0 1 14.5 3zM16 8h.01',
-  bot: 'M9 3h6v3H9zM12 6v3M5 9h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2zM9 13v2M15 13v2M2 14H0.5M22 14h1.5',
-  screen: 'M3 5h18v11H3zM8 20h8M12 16v4M6 12l3-3 2.5 2.5L15 8l3 3',
 };
 
 /** Line icons (24x24 grid), drawn with the current text color. */

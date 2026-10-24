@@ -156,7 +156,6 @@ input[type='checkbox'], input[type='radio'] { width: auto; }
 .field-label { font-weight: 600; font-size: 0.92rem; }
 .field-hint { color: var(--muted); font-size: 0.82rem; }
 .check { display: flex; align-items: center; gap: 8px; }
-.check-row { display: flex; gap: 16px; flex-wrap: wrap; }
 .form { display: flex; flex-direction: column; gap: 14px; }
 .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
 .filters { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 14px; }

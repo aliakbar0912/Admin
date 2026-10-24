@@ -10,7 +10,6 @@ interface Settings {
   allowAutoRegistration: boolean;
   requireLoginForCentralAi: boolean;
   searchPerMinute: number;
-  apiKeyRateLimitPerMinute: number;
   accountsConfigured?: boolean;
 }
 
@@ -37,7 +36,6 @@ export function Settings() {
         maxConcurrentPerDevice: form.maxConcurrentPerDevice,
         maxOutputTokens: form.maxOutputTokens,
         searchPerMinute: form.searchPerMinute,
-        apiKeyRateLimitPerMinute: form.apiKeyRateLimitPerMinute,
       };
       const saved: Settings = await api('PATCH', '/admin/api/settings', body);
       setForm(saved);
@@ -103,9 +101,6 @@ export function Settings() {
           </Field>
           <Field label="Web searches per device per minute" hint="1 to 120. Protects your search provider quota.">
             <input type="number" min={1} max={120} value={form.searchPerMinute ?? 20} onChange={(e) => setForm({ ...form, searchPerMinute: Number(e.target.value) })} />
-          </Field>
-          <Field label="Requests per API key per minute" hint="1 to 600. Applies to the keys on the API keys page.">
-            <input type="number" min={1} max={600} value={form.apiKeyRateLimitPerMinute ?? 30} onChange={(e) => setForm({ ...form, apiKeyRateLimitPerMinute: Number(e.target.value) })} />
           </Field>
           <div className="form-actions">
             <Button type="submit" variant="primary" disabled={busy}>{busy ? 'Saving…' : 'Save limits'}</Button>
