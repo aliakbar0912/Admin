@@ -11,6 +11,7 @@ import { Usage } from './pages/Usage.tsx';
 import { Settings } from './pages/Settings.tsx';
 import { Updates } from './pages/Updates.tsx';
 import { Users } from './pages/Users.tsx';
+import { WebSearch } from './pages/WebSearch.tsx';
 import { Icon } from './ui.tsx';
 
 const PAGES = [
@@ -18,6 +19,7 @@ const PAGES = [
   { id: 'usage', label: 'Usage & logs', icon: 'chart', group: 'Monitor' },
   { id: 'providers', label: 'Providers', icon: 'plug', group: 'AI' },
   { id: 'models', label: 'Models', icon: 'cube', group: 'AI' },
+  { id: 'search', label: 'Web search', icon: 'search', group: 'AI' },
   { id: 'users', label: 'Users', icon: 'user', group: 'Desktop app' },
   { id: 'devices', label: 'Devices', icon: 'monitor', group: 'Desktop app' },
   { id: 'updates', label: 'Updates', icon: 'download', group: 'Desktop app' },
@@ -132,6 +134,7 @@ export function App() {
         {page === 'overview' && <Overview />}
         {page === 'providers' && <Providers />}
         {page === 'models' && <Models />}
+        {page === 'search' && <WebSearch />}
         {page === 'users' && <Users />}
         {page === 'devices' && <Devices />}
         {page === 'memory' && <Memory />}

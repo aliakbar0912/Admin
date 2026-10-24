@@ -9,6 +9,7 @@ interface Settings {
   allowDirectProvider: boolean;
   allowAutoRegistration: boolean;
   requireLoginForCentralAi: boolean;
+  searchPerMinute: number;
   accountsConfigured?: boolean;
 }
 
@@ -34,6 +35,7 @@ export function Settings() {
         rateLimitPerMinute: form.rateLimitPerMinute,
         maxConcurrentPerDevice: form.maxConcurrentPerDevice,
         maxOutputTokens: form.maxOutputTokens,
+        searchPerMinute: form.searchPerMinute,
       };
       const saved: Settings = await api('PATCH', '/admin/api/settings', body);
       setForm(saved);
@@ -96,6 +98,9 @@ export function Settings() {
           </Field>
           <Field label="Maximum output tokens per request" hint="1 to 32768. Requests asking for more are refused.">
             <input type="number" min={1} max={32768} value={form.maxOutputTokens} onChange={(e) => setForm({ ...form, maxOutputTokens: Number(e.target.value) })} />
+          </Field>
+          <Field label="Web searches per device per minute" hint="1 to 120. Protects your search provider quota.">
+            <input type="number" min={1} max={120} value={form.searchPerMinute ?? 20} onChange={(e) => setForm({ ...form, searchPerMinute: Number(e.target.value) })} />
           </Field>
           <div className="form-actions">
             <Button type="submit" variant="primary" disabled={busy}>{busy ? 'Saving…' : 'Save limits'}</Button>

@@ -65,7 +65,15 @@ before(async () => {
     config,
     limits: redis ? new RedisLimitStore(redis, config.redisKeyPrefix) : undefined,
     redis,
-    fetch: globalThis.fetch,
+    // Search providers are public APIs: answer the Brave search API locally, pass everything else through.
+    fetch: (async (input: any, init: any) => {
+      const u = new URL(String(input instanceof Request ? input.url : input));
+      if (u.hostname === 'api.search.brave.com') {
+        if ((init?.headers as any)?.['x-subscription-token'] !== 'brave-test-key-123') return new Response('{}', { status: 401 });
+        return new Response(JSON.stringify({ web: { results: [{ title: 'Node.js releases', url: 'https://nodejs.org/en/about/previous-releases', description: 'Node.js release schedule' }] } }), { status: 200, headers: { 'content-type': 'application/json' } });
+      }
+      return fetch(input, init);
+    }) as typeof fetch,
   });
   await new Promise<void>((r) => api.listen(ADMIN_PORT + 1, '127.0.0.1', r));
   admin = createAdminServer({ apiOrigin: apiUrl });
@@ -335,6 +343,42 @@ describe('admin website, end to end', () => {
     await p.getByLabel('Require sign-in for Devora AI').click({ timeout: 5000 });
     await confirmIfAsked(p, 'works without an account again');
     await p.screenshot({ path: path.join(SHOTS, '09-settings-accounts.png'), fullPage: true });
+    await p.close();
+  });
+
+  test('the owner sets up web search: provider, key with password check, live test, and desktops see it', async (t) => {
+    if (!tdb || !browser) return t.skip(SKIP_NO_PG);
+    const p = await page();
+    await signIn(p);
+    await p.goto(`${adminUrl}/#/search`);
+    await p.getByRole('heading', { name: 'Web search' }).waitFor();
+    await p.getByText('Web search is off for desktops').waitFor();
+    await p.getByRole('button', { name: 'Add search provider' }).click();
+    const dlg = p.getByRole('dialog', { name: 'Add search provider' });
+    await dlg.getByLabel('Type').selectOption('brave');
+    await dlg.getByRole('button', { name: 'Add', exact: true }).click();
+    await p.getByText('Now set its API key').waitFor();
+    const row = p.locator('tr', { hasText: 'Brave Search API' });
+    await row.getByRole('button', { name: 'Set key' }).click();
+    await p.getByRole('dialog').getByLabel('API key').fill('brave-test-key-123');
+    await p.getByRole('dialog').getByRole('button', { name: 'Store key' }).click();
+    await confirmIfAsked(p, 'API key stored');
+    assert.equal(await p.getByText('brave-test-key-123').count(), 0, 'the key is never shown');
+    await row.getByRole('button', { name: 'Test' }).click();
+    await p.getByRole('dialog').getByRole('button', { name: 'Search' }).click();
+    await p.getByText('working; 1 result').waitFor();
+    await p.getByText('Node.js releases').waitFor();
+    await p.screenshot({ path: path.join(SHOTS, '10-web-search-test.png'), fullPage: true });
+    await p.getByRole('dialog').getByRole('button', { name: 'Close' }).click();
+    await row.getByText('ready').waitFor();
+    await p.screenshot({ path: path.join(SHOTS, '11-web-search.png'), fullPage: true });
+    // Desktops: the catalogue says web search is on, and /v1/search answers.
+    const reg = await fetch(`${apiUrl}/v1/devices/register`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ installId: crypto.randomBytes(18).toString('base64url'), deviceName: 'Search PC' }) });
+    const tok = ((await reg.json()) as any).token as string;
+    const cat = (await (await fetch(`${apiUrl}/v1/catalogue`, { headers: { authorization: `Bearer ${tok}` } })).json()) as any;
+    assert.equal(cat.policy.webSearch, true);
+    const res = (await (await fetch(`${apiUrl}/v1/search`, { method: 'POST', headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' }, body: JSON.stringify({ query: 'node releases' }) })).json()) as any;
+    assert.equal(res.results[0].url, 'https://nodejs.org/en/about/previous-releases');
     await p.close();
   });
 
