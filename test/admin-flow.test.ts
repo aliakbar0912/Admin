@@ -324,6 +324,10 @@ describe('admin website, end to end', () => {
     await row.getByRole('button', { name: 'Manage' }).click();
     const dialog = p.getByRole('dialog', { name: 'Ayesha' });
     await dialog.getByText('Ayesha laptop').waitFor();
+    await dialog.getByText('Requests (30 days)').waitFor();
+    await dialog.getByRole('tab', { name: 'Brain' }).click();
+    await dialog.getByText('No memories yet.').waitFor();
+    await p.screenshot({ path: path.join(SHOTS, '12-user-activity.png'), fullPage: true });
     await dialog.getByRole('button', { name: 'Block account' }).click();
     await confirmIfAsked(p, 'is blocked and signed out everywhere');
     await p.locator('tr', { hasText: 'ayesha@example.test' }).getByText('blocked', { exact: true }).waitFor();
@@ -379,6 +383,31 @@ describe('admin website, end to end', () => {
     assert.equal(cat.policy.webSearch, true);
     const res = (await (await fetch(`${apiUrl}/v1/search`, { method: 'POST', headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' }, body: JSON.stringify({ query: 'node releases' }) })).json()) as any;
     assert.equal(res.results[0].url, 'https://nodejs.org/en/about/previous-releases');
+    await p.close();
+  });
+
+  test('the owner publishes a skill from the admin site and desktops receive it', async (t) => {
+    if (!tdb || !browser) return t.skip(SKIP_NO_PG);
+    const p = await page();
+    await signIn(p);
+    await p.goto(`${adminUrl}/#/skills`);
+    await p.getByRole('heading', { name: 'Skills' }).waitFor();
+    await p.getByRole('button', { name: 'New skill' }).click();
+    const dlg = p.getByRole('dialog', { name: 'New skill' });
+    await dlg.getByLabel('Name').fill('Code review checklist');
+    await dlg.getByLabel('Description').fill('Use when reviewing a pull request.');
+    await dlg.getByLabel('Triggers').fill('review, pull request');
+    await dlg.locator('textarea').nth(1).fill('1. Check tests.\n2. Check security.');
+    await p.screenshot({ path: path.join(SHOTS, '13-skill-editor.png'), fullPage: true });
+    await dlg.getByRole('button', { name: 'Publish to desktops' }).click();
+    await p.getByText('Code review checklist published').waitFor();
+    await p.locator('tr', { hasText: 'Code review checklist' }).getByText('on', { exact: true }).waitFor();
+    await p.screenshot({ path: path.join(SHOTS, '14-skills.png'), fullPage: true });
+    const reg = await fetch(`${apiUrl}/v1/devices/register`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ installId: crypto.randomBytes(18).toString('base64url'), deviceName: 'Skill PC' }) });
+    const tok = ((await reg.json()) as any).token as string;
+    const sk = (await (await fetch(`${apiUrl}/v1/skills`, { headers: { authorization: `Bearer ${tok}` } })).json()) as any;
+    assert.equal(sk.skills[0].name, 'Code review checklist');
+    assert.deepEqual(sk.skills[0].triggers, ['review', 'pull request']);
     await p.close();
   });
 

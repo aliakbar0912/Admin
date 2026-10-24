@@ -348,3 +348,10 @@ a { color: var(--accent); }
 .search-results { margin: 12px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 10px; }
 .search-results li { min-width: 0; overflow-wrap: anywhere; }
 .toolbar input:not([type]) { flex: 1 1 220px; min-width: 0; }
+
+/* Tabs (user activity) and the skill editor */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin: 12px 0; }
+.tab { background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; cursor: pointer; color: var(--muted); font: inherit; }
+.tab.on { color: inherit; border-bottom-color: currentColor; font-weight: 600; }
+.skill-form textarea { width: 100%; resize: vertical; }
+.modal .stats { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }

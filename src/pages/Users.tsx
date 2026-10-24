@@ -150,6 +150,7 @@ function UserDialog(props: { row: UserRow; onClose: () => void; onDone: (text: s
             <dt>User id</dt>
             <dd className="mono small">{props.row.id}</dd>
           </dl>
+          <UserActivity userId={props.row.id} />
           <h3 className="section-title">Devices</h3>
           <Table head={['Name', 'Session', 'Version', 'Last seen']} rows={d.devices.length} empty="No device has signed in with this account.">
             {d.devices.map((x) => (
@@ -186,5 +187,79 @@ function UserDialog(props: { row: UserRow; onClose: () => void; onDone: (text: s
         </div>
       )}
     </Modal>
+  );
+}
+
+interface Activity {
+  days: number;
+  totals: { requests: number; failed: number; prompt_tokens: number; completion_tokens: number; searches: number };
+  byModel: { model: string; requests: number; failed: number; promptTokens: number; completionTokens: number; avgMs: number }[];
+  recent: { at: string; model: string; provider: string; status: string; httpStatus: number; error: string | null; latencyMs: number; promptTokens: number | null; completionTokens: number | null; device: string | null }[];
+  brain: { active: number; latest: { id: string; kind: string; scope: string; content: string; pinned: boolean; updatedAt: string }[] };
+}
+
+/** One account's requests (metadata only) and brain (agent memory), across all its devices. */
+function UserActivity({ userId }: { userId: string }) {
+  const a = useLoad<Activity>(() => api('GET', `/admin/api/users/${userId}/activity?days=30`), [userId]);
+  const [tab, setTab] = useState<'requests' | 'brain'>('requests');
+  if (a.error) return <Notice kind="error">{a.error}</Notice>;
+  if (!a.data) return <p className="muted small">Loading activity…</p>;
+  const d = a.data;
+  const fmt = (n: number) => n.toLocaleString();
+  return (
+    <>
+      <div className="stats">
+        <div className="stat"><div className="stat-label">Requests (30 days)</div><div className="stat-value">{fmt(d.totals.requests)}</div><div className="stat-hint">{d.totals.failed} failed</div></div>
+        <div className="stat"><div className="stat-label">Tokens (30 days)</div><div className="stat-value">{fmt(d.totals.prompt_tokens + d.totals.completion_tokens)}</div><div className="stat-hint">{fmt(d.totals.prompt_tokens)} in · {fmt(d.totals.completion_tokens)} out</div></div>
+        <div className="stat"><div className="stat-label">Web searches</div><div className="stat-value">{fmt(d.totals.searches)}</div></div>
+        <div className="stat"><div className="stat-label">Brain</div><div className="stat-value">{fmt(d.brain.active)}</div><div className="stat-hint">memories</div></div>
+      </div>
+      <div className="tabs" role="tablist">
+        <button role="tab" aria-selected={tab === 'requests'} className={`tab${tab === 'requests' ? ' on' : ''}`} onClick={() => setTab('requests')}>Requests</button>
+        <button role="tab" aria-selected={tab === 'brain'} className={`tab${tab === 'brain' ? ' on' : ''}`} onClick={() => setTab('brain')}>Brain</button>
+      </div>
+      {tab === 'requests' ? (
+        <>
+          <Table head={['Model', 'Requests', 'Failed', 'Tokens in / out', 'Avg time']} rows={d.byModel.length} empty="No requests in the last 30 days.">
+            {d.byModel.map((m) => (
+              <tr key={m.model}>
+                <td>{m.model}</td>
+                <td className="small">{fmt(m.requests)}</td>
+                <td className="small">{m.failed ? <Badge tone="bad">{m.failed}</Badge> : 0}</td>
+                <td className="small">{fmt(m.promptTokens)} / {fmt(m.completionTokens)}</td>
+                <td className="small">{m.avgMs} ms</td>
+              </tr>
+            ))}
+          </Table>
+          <h3 className="section-title">Recent requests</h3>
+          <p className="small muted">Devora stores only request details (model, status, tokens, time), never the prompts or answers.</p>
+          <Table head={['When', 'Model', 'Status', 'Tokens', 'Time', 'Device']} rows={d.recent.length} empty="No requests yet.">
+            {d.recent.map((r, i) => (
+              <tr key={i}>
+                <td className="small">{when(r.at)}</td>
+                <td className="small">{r.model}</td>
+                <td>{r.status === 'ok' ? <Badge tone="ok">ok</Badge> : <Badge tone={r.status === 'cancelled' ? 'muted' : 'bad'}>{r.error ?? r.status}</Badge>}</td>
+                <td className="small">{r.promptTokens ?? '—'} / {r.completionTokens ?? '—'}</td>
+                <td className="small">{r.latencyMs} ms</td>
+                <td className="small">{r.device ?? '—'}</td>
+              </tr>
+            ))}
+          </Table>
+        </>
+      ) : (
+        <>
+          <p className="small muted">What the agent has learned for this account (synced from their desktops). Newest first; all of it is under Memory.</p>
+          <Table head={['Kind', 'Memory', 'Updated']} rows={d.brain.latest.length} empty="No memories yet.">
+            {d.brain.latest.map((m) => (
+              <tr key={m.id}>
+                <td><Badge tone="muted">{m.kind}</Badge>{m.pinned ? <> <Badge tone="ok">pinned</Badge></> : null}</td>
+                <td className="small">{m.content}</td>
+                <td className="small">{when(m.updatedAt)}</td>
+              </tr>
+            ))}
+          </Table>
+        </>
+      )}
+    </>
   );
 }
