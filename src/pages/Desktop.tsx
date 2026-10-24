@@ -30,13 +30,19 @@ export function Desktop() {
     >
       {loading && !data && <Spinner />}
       {error && <Notice kind="error">{error}</Notice>}
+      {data && data.maintenance && (
+        <Notice kind="error">
+          <strong>Maintenance is ON.</strong> Devora AI and web search are paused on every desktop (and for API keys) until you clear this
+          checkbox and save. Apps pick up the change within about a minute of their next check-in.
+        </Notice>
+      )}
       {data && <ConfigForm initial={data} onSaved={() => reload()} />}
       <Card title="How desktops use this">
         <ul className="plain-list small">
           <li><strong>Status message</strong> is shown as a notice inside the app, for example “Maintenance Sunday 02:00–03:00 UTC”.</li>
+          <li><strong>Maintenance</strong> really pauses the service: apps stop calling central AI and web search, keep local features, and resume on their own when you turn it off.</li>
           <li><strong>Minimum version</strong> makes older apps show an update-required notice; they keep local features but stop calling central AI.</li>
           <li><strong>Download URL</strong> is the https page the app sends users to for the installer. It only changes where users download, never what is installed.</li>
-          <li><strong>Maintenance</strong> tells apps to say the service is briefly unavailable, without changing anything else.</li>
           <li>Published releases (Updates page) always also announce their latest and required versions; the strongest rule wins.</li>
         </ul>
       </Card>
@@ -67,7 +73,12 @@ function ConfigForm(props: { initial: DesktopConfigResponse; onSaved: () => void
     setMessage(null);
     try {
       await api('PATCH', '/admin/api/desktop-config', { statusMessage, minVersion, downloadUrl, maintenance });
-      setMessage({ kind: 'success', text: 'Saved. Desktops pick this up on their next check (within about 6 hours).' });
+      setMessage({
+        kind: 'success',
+        text: maintenance
+          ? 'Saved. Maintenance is ON: desktops pause Devora AI on their next check (within about a minute once they see the flag).'
+          : 'Saved. Desktops pick this up on their next check (within about 6 hours, or about a minute if they were paused by maintenance).',
+      });
       props.onSaved();
     } catch (err) {
       setMessage({ kind: 'error', text: err instanceof ApiError ? err.message : 'Could not save.' });
@@ -88,10 +99,10 @@ function ConfigForm(props: { initial: DesktopConfigResponse; onSaved: () => void
         <Field label="Download URL" hint={d.environment.downloadUrl ? `Environment value: ${d.environment.downloadUrl}` : 'The https page users download the installer from.'}>
           <input value={downloadUrl} onChange={(e) => setDownloadUrl(e.target.value)} placeholder="https://www.YOUR_DOMAIN/download" className="mono" />
         </Field>
-        <Field label="Maintenance" hint="A short-service notice; nothing else changes.">
+        <Field label="Maintenance" hint="While on: apps pause Devora AI and web search, keep working locally, and resume automatically when you turn it off.">
           <label className="check">
             <input type="checkbox" checked={maintenance} onChange={(e) => setMaintenance(e.target.checked)} />
-            Desktops show a maintenance notice
+            Pause Devora AI on all desktops (maintenance mode)
           </label>
         </Field>
         <div className="small muted">
