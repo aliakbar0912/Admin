@@ -3,7 +3,7 @@
 // so the same build works on any domain: changing ADMIN_API_ORIGIN needs a restart, never a rebuild.
 // Environment:
 //   ADMIN_API_ORIGIN  the API origin, for example https://api.YOUR_DOMAIN   (required)
-//   ADMIN_API_KEY     the API_ACCESS_KEY of the API server, sent as x-api-key on every call
+//   ADMIN_API_KEY     the API_ACCESS_KEY of the API server. Added server-side by the /admin/api proxy; never sent to the browser.
 //   PORT              default 8081
 //   HOST              default 0.0.0.0
 //   ADMIN_HSTS        "true" to send Strict-Transport-Security (default true in production)
@@ -57,13 +57,58 @@ export function loadAdminConfig(env = process.env) {
   };
 }
 
+const PROXY_LIMIT = 64 * 1024 * 1024;
+const FORWARD_REQ = ['accept', 'content-type', 'cookie', 'x-csrf-token', 'user-agent', 'origin'];
+const FORWARD_RES = ['content-type', 'retry-after', 'x-request-id', 'cache-control'];
+
+/** Forwards /admin/api/* to the API, adding the secret x-api-key here on the server. The browser never sees the key. */
+async function proxy(req, res, api, apiKey, baseHeaders) {
+  const chunks = [];
+  let size = 0;
+  for await (const c of req) {
+    size += c.length;
+    if (size > PROXY_LIMIT) {
+      res.writeHead(413, baseHeaders);
+      return res.end();
+    }
+    chunks.push(c);
+  }
+  const headers = {};
+  for (const h of FORWARD_REQ) if (typeof req.headers[h] === 'string') headers[h] = req.headers[h];
+  if (apiKey) headers['x-api-key'] = apiKey;
+  const xff = req.headers['x-forwarded-for'];
+  const client = (typeof xff === 'string' && xff.split(',').pop().trim()) || req.socket.remoteAddress || '';
+  if (client) headers['x-forwarded-for'] = client;
+  let upstream;
+  try {
+    upstream = await fetch(api + req.url, {
+      method: req.method,
+      headers,
+      body: req.method === 'GET' || req.method === 'HEAD' ? undefined : Buffer.concat(chunks),
+      redirect: 'manual',
+    });
+  } catch {
+    res.writeHead(502, { ...baseHeaders, 'content-type': 'application/json' });
+    return res.end('{"error":{"code":"bad_gateway","message":"The API could not be reached."}}');
+  }
+  const out = { ...baseHeaders };
+  for (const h of FORWARD_RES) {
+    const v = upstream.headers.get(h);
+    if (v) out[h] = v;
+  }
+  const cookies = upstream.headers.getSetCookie?.() ?? [];
+  if (cookies.length) out['set-cookie'] = cookies;
+  res.writeHead(upstream.status, out);
+  res.end(Buffer.from(await upstream.arrayBuffer()));
+}
+
 export function createAdminServer({ apiOrigin: api, hsts = false, apiKey = '' }) {
   const csp = [
     "default-src 'self'",
     "script-src 'self'",
     "style-src 'self'",
     "img-src 'self' data:",
-    `connect-src 'self' ${api}`,
+    "connect-src 'self'",
     "frame-ancestors 'none'",
     "base-uri 'none'",
     "form-action 'self'",
@@ -85,6 +130,13 @@ export function createAdminServer({ apiOrigin: api, hsts = false, apiKey = '' })
     };
     if (hsts) headers['strict-transport-security'] = 'max-age=31536000';
     const pathname = (req.url ?? '/').split('?')[0];
+    if (pathname.startsWith('/admin/api/')) {
+      proxy(req, res, api, apiKey, headers).catch(() => {
+        if (!res.headersSent) res.writeHead(502, headers);
+        res.end();
+      });
+      return;
+    }
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       res.writeHead(405, { ...headers, allow: 'GET, HEAD' });
       return res.end();
@@ -95,7 +147,7 @@ export function createAdminServer({ apiOrigin: api, hsts = false, apiKey = '' })
     }
     if (pathname === '/config.js') {
       res.writeHead(200, { ...headers, 'content-type': 'text/javascript; charset=utf-8' });
-      return res.end(`window.__DEVORA_ADMIN_CONFIG__ = ${JSON.stringify({ apiOrigin: api, apiKey })};\n`);
+      return res.end(`window.__DEVORA_ADMIN_CONFIG__ = ${JSON.stringify({})};\n`);
     }
     const entry = files.get(pathname);
     if (!entry) {

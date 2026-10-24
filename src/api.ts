@@ -2,12 +2,12 @@
 // The API origin comes from /config.js (served by the admin server from ADMIN_API_ORIGIN). Nothing else is trusted.
 declare global {
   interface Window {
-    __DEVORA_ADMIN_CONFIG__?: { apiOrigin: string; apiKey?: string };
+    __DEVORA_ADMIN_CONFIG__?: Record<string, unknown>;
   }
 }
 
-const origin = window.__DEVORA_ADMIN_CONFIG__?.apiOrigin ?? '';
-const apiKey = window.__DEVORA_ADMIN_CONFIG__?.apiKey ?? '';
+// Same-origin: the admin server proxies /admin/api/* to the API and adds the secret key there.
+const origin = '';
 let csrf = '';
 
 export class ApiError extends Error {
@@ -38,14 +38,12 @@ export async function api<T = any>(method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'D
   const headers: Record<string, string> = { accept: 'application/json' };
   if (body !== undefined) headers['content-type'] = 'application/json';
   if (method !== 'GET') headers['x-csrf-token'] = csrf;
-  if (apiKey) headers['x-api-key'] = apiKey;
-  if (!origin) throw new ApiError(0, 'not_configured', 'The admin site has no API address. Set ADMIN_API_ORIGIN on the admin service and restart it.');
   let res: Response;
   try {
     res = await fetch(origin + path, {
       method,
       headers,
-      credentials: 'include',
+      credentials: 'same-origin',
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
@@ -78,10 +76,9 @@ export function when(iso: string | null | undefined): string {
 
 /** Uploads one piece of a file as raw bytes (release installers). Same session, CSRF and error handling as api(). */
 export async function uploadPiece<T = any>(path: string, piece: Blob): Promise<T> {
-  if (!origin) throw new ApiError(0, 'not_configured', 'The admin site has no API address.');
   let res: Response;
   try {
-    res = await fetch(origin + path, { method: 'PUT', headers: { accept: 'application/json', 'content-type': 'application/octet-stream', 'x-csrf-token': csrf, ...(apiKey ? { 'x-api-key': apiKey } : {}) }, credentials: 'include', body: piece });
+    res = await fetch(origin + path, { method: 'PUT', headers: { accept: 'application/json', 'content-type': 'application/octet-stream', 'x-csrf-token': csrf }, credentials: 'same-origin', body: piece });
   } catch {
     throw new ApiError(0, 'network', 'The upload was interrupted. Check your connection.');
   }
