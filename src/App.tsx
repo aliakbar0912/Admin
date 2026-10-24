@@ -7,6 +7,7 @@ import { Providers } from './pages/Providers.tsx';
 import { Models } from './pages/Models.tsx';
 import { Devices } from './pages/Devices.tsx';
 import { Memory } from './pages/Memory.tsx';
+import { Brain } from './pages/Brain.tsx';
 import { Usage } from './pages/Usage.tsx';
 import { Settings } from './pages/Settings.tsx';
 import { Updates } from './pages/Updates.tsx';
@@ -21,6 +22,7 @@ import { Icon } from './ui.tsx';
 const PAGES = [
   { id: 'overview', label: 'Overview', icon: 'home', group: 'Monitor' },
   { id: 'usage', label: 'Usage & logs', icon: 'chart', group: 'Monitor' },
+  { id: 'brain', label: 'Brain', icon: 'brain', group: 'Monitor' },
   { id: 'providers', label: 'Providers', icon: 'plug', group: 'AI' },
   { id: 'models', label: 'Models', icon: 'cube', group: 'AI' },
   { id: 'search', label: 'Web search', icon: 'search', group: 'AI' },
@@ -150,6 +152,7 @@ export function App() {
         {page === 'devices' && <Devices />}
         {page === 'desktop' && <Desktop />}
         {page === 'memory' && <Memory />}
+        {page === 'brain' && <Brain />}
         {page === 'usage' && <Usage />}
         {page === 'updates' && <Updates />}
         {page === 'settings' && <Settings />}

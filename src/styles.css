@@ -356,3 +356,35 @@ a { color: var(--accent); }
 .tab.on { color: inherit; border-bottom-color: currentColor; font-weight: 600; }
 .skill-form textarea { width: 100%; resize: vertical; }
 .modal .stats { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+
+/* Brain page */
+.pulse { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--border); flex: none; }
+.pulse-online { background: var(--ok); }
+.pulse-working { background: var(--ok); box-shadow: 0 0 0 0 var(--ok); animation: brain-pulse 1.6s ease-out infinite; }
+@keyframes brain-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 55%, transparent); } 100% { box-shadow: 0 0 0 9px transparent; } }
+@media (prefers-reduced-motion: reduce) { .pulse-working { animation: none; } }
+.brain-devices { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.brain-device { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; background: var(--surface); display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.brain-working { border-color: color-mix(in srgb, var(--ok) 45%, var(--border)); }
+.brain-device-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.brain-device-head strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brain-device-head .spacer { flex: 1; }
+.brain-tasks li { padding: 6px 0; border-top: 1px solid var(--border); }
+.brain-task-title { font-weight: 600; overflow-wrap: anywhere; }
+.brain-meta { display: flex; flex-direction: column; gap: 3px; overflow-wrap: anywhere; }
+.brain-offline { margin-top: 12px; }
+.brain-offline summary { cursor: pointer; margin-bottom: 10px; }
+.spacer-v { height: 14px; }
+.growth { display: flex; align-items: flex-end; gap: 4px; height: 150px; padding-top: 6px; }
+.growth-day { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; min-width: 0; }
+.growth-cols { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 2px; border-bottom: 1px solid var(--border); }
+.growth-col { width: 40%; max-width: 10px; min-height: 1px; border-radius: 3px 3px 0 0; }
+.growth-mem { background: var(--accent); }
+.growth-task { background: var(--ok); }
+.growth-label { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.legend { display: flex; gap: 16px; margin-top: 8px; }
+.legend .dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; }
+.feed li { display: flex; gap: 10px; align-items: baseline; }
+.feed-time { flex: none; width: 84px; }
+.feed-title { overflow-wrap: anywhere; }
+.live-on { color: var(--ok); }
