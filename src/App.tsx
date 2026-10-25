@@ -19,6 +19,7 @@ import { Agents } from './pages/Agents.tsx';
 import { Announcements } from './pages/Announcements.tsx';
 import { AuditLog } from './pages/AuditLog.tsx';
 import { Desktop } from './pages/Desktop.tsx';
+import { Website } from './pages/Website.tsx';
 import { Icon } from './ui.tsx';
 
 const PAGES = [
@@ -26,6 +27,7 @@ const PAGES = [
   { id: 'usage', label: 'Usage & logs', icon: 'chart', group: 'Monitor' },
   { id: 'brain', label: 'Brain', icon: 'brain', group: 'Monitor' },
   { id: 'announcements', label: 'Announcements', icon: 'bell', group: 'Monitor' },
+  { id: 'website', label: 'Website', icon: 'globe', group: 'Website' },
   { id: 'providers', label: 'Providers', icon: 'plug', group: 'AI' },
   { id: 'models', label: 'Models', icon: 'cube', group: 'AI' },
   { id: 'search', label: 'Web search', icon: 'search', group: 'AI' },
@@ -40,7 +42,7 @@ const PAGES = [
   { id: 'settings', label: 'Settings', icon: 'sliders', group: 'Server' },
   { id: 'audit', label: 'Audit log', icon: 'shield', group: 'Server' },
 ] as const;
-const GROUPS = ['Monitor', 'AI', 'API', 'Desktop app', 'Server'] as const;
+const GROUPS = ['Monitor', 'Website', 'AI', 'API', 'Desktop app', 'Server'] as const;
 type Theme = 'system' | 'light' | 'dark';
 function loadTheme(): Theme {
   try {
@@ -152,6 +154,7 @@ export function App() {
         {page === 'skills' && <Skills />}
         {page === 'agents' && <Agents />}
         {page === 'announcements' && <Announcements />}
+        {page === 'website' && <Website />}
         {page === 'apikeys' && <ApiKeys />}
         {page === 'users' && <Users />}
         {page === 'devices' && <Devices />}
