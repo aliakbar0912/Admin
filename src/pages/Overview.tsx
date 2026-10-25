@@ -12,6 +12,8 @@ interface OverviewData {
   p95Ms: number | null;
   apiKeysEnabled: number;
   orgAgentsEnabled: number;
+  orgSkillsEnabled: number;
+  orgAnnouncementsEnabled: number;
   providers: { name: string; enabled: boolean; lastTestOk: boolean | null; lastTestAt: string | null; lastTestMessage: string | null }[];
 }
 
@@ -50,6 +52,8 @@ export function Overview() {
             <Stat label="Enabled models" value={data.modelsEnabled} hint={`${data.providersEnabled} of ${data.providersTotal} providers enabled`} />
             <Stat label="API keys" value={data.apiKeysEnabled} hint={<a href="#/apikeys">manage keys</a>} />
             <Stat label="Org agents" value={data.orgAgentsEnabled} hint={<a href="#/agents">manage agents</a>} />
+            <Stat label="Org skills" value={data.orgSkillsEnabled} hint={<a href="#/skills">manage skills</a>} />
+            <Stat label="Live announcements" value={data.orgAnnouncementsEnabled} hint={<a href="#/announcements">manage announcements</a>} />
           </div>
           <div className="two-col">
             <Card title="Desktop app">

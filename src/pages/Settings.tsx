@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { api, ApiError, sensitive } from '../api.ts';
 import { Button, Card, Field, Notice, Page, Spinner, useLoad } from '../ui.tsx';
-
 interface Settings {
   rateLimitPerMinute: number;
   maxConcurrentPerDevice: number;
@@ -87,6 +86,26 @@ export function Settings() {
     }
   };
 
+  /** Downloads the configuration backup as a JSON file. Secrets are never part of the export. */
+  const downloadExport = async () => {
+    setMessage(null);
+    try {
+      const data = await api<Record<string, unknown>>('GET', '/admin/api/export');
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `devora-config-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setMessage({ kind: 'success', text: 'Configuration downloaded. The export never contains key material, hashes or tokens.' });
+    } catch (err) {
+      setMessage({ kind: 'error', text: err instanceof ApiError ? err.message : 'Could not create the export.' });
+    }
+  };
+
   return (
     <Page title="Settings" intro="Limits that protect the service and the providers' budgets.">
       {message && <Notice kind={message.kind}>{message.text}</Notice>}
@@ -151,6 +170,17 @@ export function Settings() {
           Allow direct-provider mode for the owner
         </label>
         <p id="direct-note" className="muted small">Turn it off again once the migration or rollback is finished.</p>
+      </Card>
+
+      <Card title="Configuration backup">
+        <p>
+          Downloads everything you configured here as one JSON file: providers, models, devices (names only), agents, skills, announcements, search
+          providers, API key metadata and the server settings. The export is safe to keep: provider API keys, key hashes, tokens and passwords are
+          never included. Keep a fresh copy before big changes, for example before moving to a new server.
+        </p>
+        <div className="form-actions" style={{ justifyContent: 'flex-start' }}>
+          <Button onClick={() => void downloadExport()}>Download configuration (JSON)</Button>
+        </div>
       </Card>
     </Page>
   );

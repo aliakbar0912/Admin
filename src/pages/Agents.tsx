@@ -24,6 +24,13 @@ interface Limits {
   instructions: number;
   suggestedModel: number;
 }
+interface Template {
+  name: string;
+  description: string;
+  instructions: string;
+  access: string;
+  suggestedModel: string | null;
+}
 
 const ACCESS_HELP: Record<string, string> = {
   read: 'Read-only: inspect the project, never change anything.',
@@ -42,7 +49,7 @@ Rules:
 - ...`;
 
 export function Agents() {
-  const { data, error, reload } = useLoad<{ agents: OrgAgent[]; version: number; limits: Limits; accessLevels: string[] }>(() => api('GET', '/admin/api/agents'));
+  const { data, error, reload } = useLoad<{ agents: OrgAgent[]; version: number; limits: Limits; accessLevels: string[]; templates: Template[] }>(() => api('GET', '/admin/api/agents'));
   const [editing, setEditing] = useState<OrgAgent | 'new' | null>(null);
   const [deleting, setDeleting] = useState<OrgAgent | null>(null);
   const [message, setMessage] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
@@ -93,6 +100,7 @@ export function Agents() {
           agent={editing === 'new' ? null : editing}
           limits={data.limits}
           accessLevels={data.accessLevels}
+          templates={data.templates ?? []}
           onClose={() => setEditing(null)}
           onDone={(name, created) => {
             setEditing(null);
@@ -134,7 +142,7 @@ export function Agents() {
   );
 }
 
-function AgentEditor(props: { agent: OrgAgent | null; limits: Limits; accessLevels: string[]; onClose: () => void; onDone: (name: string, created: boolean) => void }) {
+function AgentEditor(props: { agent: OrgAgent | null; limits: Limits; accessLevels: string[]; templates: Template[]; onClose: () => void; onDone: (name: string, created: boolean) => void }) {
   const a = props.agent;
   const [name, setName] = useState(a?.name ?? '');
   const [description, setDescription] = useState(a?.description ?? '');
@@ -153,6 +161,17 @@ function AgentEditor(props: { agent: OrgAgent | null; limits: Limits; accessLeve
     instructions.length > L.instructions && `Instructions: at most ${L.instructions} characters.`,
     suggestedModel.length > L.suggestedModel && `Suggested model: at most ${L.suggestedModel} characters.`,
   ].filter(Boolean) as string[];
+
+  /** Fills the form from a ready-made preset (only for new agents; an edit never resets). */
+  const applyTemplate = (slug: string) => {
+    const t = props.templates.find((x) => x.name === slug);
+    if (!t) return;
+    setName(t.name);
+    setDescription(t.description);
+    setInstructions(t.instructions);
+    setAccess(t.access);
+    setSuggestedModel(t.suggestedModel ?? '');
+  };
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -174,6 +193,16 @@ function AgentEditor(props: { agent: OrgAgent | null; limits: Limits; accessLeve
   return (
     <Modal title={a ? `Edit ${a.name}` : 'New agent'} onClose={props.onClose}>
       <form className="form" onSubmit={submit}>
+        {!a && props.templates.length > 0 && (
+          <Field label="Start from a template" hint="Ready-made presets the server provides; every field can still be edited after.">
+            <select value="" onChange={(e) => applyTemplate(e.target.value)}>
+              <option value="">Choose a template…</option>
+              {props.templates.map((t) => (
+                <option key={t.name} value={t.name}>{t.name}</option>
+              ))}
+            </select>
+          </Field>
+        )}
         <Field label="Name" hint="Short and specific, for example “Changelog writer”.">
           <input value={name} onChange={(e) => setName(e.target.value)} maxLength={L.name} required />
         </Field>

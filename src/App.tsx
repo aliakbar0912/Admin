@@ -16,6 +16,8 @@ import { WebSearch } from './pages/WebSearch.tsx';
 import { Skills } from './pages/Skills.tsx';
 import { ApiKeys } from './pages/ApiKeys.tsx';
 import { Agents } from './pages/Agents.tsx';
+import { Announcements } from './pages/Announcements.tsx';
+import { AuditLog } from './pages/AuditLog.tsx';
 import { Desktop } from './pages/Desktop.tsx';
 import { Icon } from './ui.tsx';
 
@@ -23,6 +25,7 @@ const PAGES = [
   { id: 'overview', label: 'Overview', icon: 'home', group: 'Monitor' },
   { id: 'usage', label: 'Usage & logs', icon: 'chart', group: 'Monitor' },
   { id: 'brain', label: 'Brain', icon: 'brain', group: 'Monitor' },
+  { id: 'announcements', label: 'Announcements', icon: 'bell', group: 'Monitor' },
   { id: 'providers', label: 'Providers', icon: 'plug', group: 'AI' },
   { id: 'models', label: 'Models', icon: 'cube', group: 'AI' },
   { id: 'search', label: 'Web search', icon: 'search', group: 'AI' },
@@ -35,6 +38,7 @@ const PAGES = [
   { id: 'updates', label: 'Updates', icon: 'download', group: 'Desktop app' },
   { id: 'memory', label: 'Memory', icon: 'brain', group: 'Desktop app' },
   { id: 'settings', label: 'Settings', icon: 'sliders', group: 'Server' },
+  { id: 'audit', label: 'Audit log', icon: 'shield', group: 'Server' },
 ] as const;
 const GROUPS = ['Monitor', 'AI', 'API', 'Desktop app', 'Server'] as const;
 type Theme = 'system' | 'light' | 'dark';
@@ -147,6 +151,7 @@ export function App() {
         {page === 'search' && <WebSearch />}
         {page === 'skills' && <Skills />}
         {page === 'agents' && <Agents />}
+        {page === 'announcements' && <Announcements />}
         {page === 'apikeys' && <ApiKeys />}
         {page === 'users' && <Users />}
         {page === 'devices' && <Devices />}
@@ -156,6 +161,7 @@ export function App() {
         {page === 'usage' && <Usage />}
         {page === 'updates' && <Updates />}
         {page === 'settings' && <Settings />}
+        {page === 'audit' && <AuditLog />}
       </main>
       {reauth && <ReauthDialog onDone={(ok) => { reauth.resolve(ok); setReauth(null); }} />}
     </div>
