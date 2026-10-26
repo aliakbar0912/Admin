@@ -15,6 +15,7 @@ import { Users } from './pages/Users.tsx';
 import { WebSearch } from './pages/WebSearch.tsx';
 import { Skills } from './pages/Skills.tsx';
 import { Ecc } from './pages/Ecc.tsx';
+import { Website } from './pages/Website.tsx';
 import { ApiKeys } from './pages/ApiKeys.tsx';
 import { Agents } from './pages/Agents.tsx';
 import { Announcements } from './pages/Announcements.tsx';
@@ -27,6 +28,7 @@ const PAGES = [
   { id: 'usage', label: 'Usage & logs', icon: 'chart', group: 'Monitor' },
   { id: 'brain', label: 'Brain', icon: 'brain', group: 'Monitor' },
   { id: 'announcements', label: 'Announcements', icon: 'bell', group: 'Monitor' },
+  { id: 'website', label: 'Website', icon: 'globe', group: 'Website' },
   { id: 'providers', label: 'Providers', icon: 'plug', group: 'AI' },
   { id: 'models', label: 'Models', icon: 'cube', group: 'AI' },
   { id: 'search', label: 'Web search', icon: 'search', group: 'AI' },
@@ -42,7 +44,7 @@ const PAGES = [
   { id: 'settings', label: 'Settings', icon: 'sliders', group: 'Server' },
   { id: 'audit', label: 'Audit log', icon: 'shield', group: 'Server' },
 ] as const;
-const GROUPS = ['Monitor', 'AI', 'API', 'Desktop app', 'Server'] as const;
+const GROUPS = ['Monitor', 'Website', 'AI', 'API', 'Desktop app', 'Server'] as const;
 type Theme = 'system' | 'light' | 'dark';
 function loadTheme(): Theme {
   try {
@@ -156,6 +158,7 @@ export function App() {
         {page === 'agents' && <Agents />}
         {page === 'announcements' && <Announcements />}
         {page === 'apikeys' && <ApiKeys />}
+        {page === 'website' && <Website />}
         {page === 'users' && <Users />}
         {page === 'devices' && <Devices />}
         {page === 'desktop' && <Desktop />}

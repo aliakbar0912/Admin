@@ -184,6 +184,7 @@ const ICONS: Record<string, string> = {
   bell: 'M12 3a6 6 0 0 0-6 6v3.5L4 16v1h16v-1l-2-3.5V9a6 6 0 0 0-6-6zM9.5 19a2.5 2.5 0 0 0 5 0',
   shield: 'M12 3l8 3v5c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6zM9 11.5l2 2 4-4.5',
   screen: 'M3 5h18v11H3zM8 20h8M12 16v4M6 12l3-3 2.5 2.5L15 8l3 3',
+  globe: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c2.5 2.4 4 5.6 4 9s-1.5 6.6-4 9c-2.5-2.4-4-5.6-4-9s1.5-6.6 4-9z',
 };
 
 /** Line icons (24x24 grid), drawn with the current text color. */
