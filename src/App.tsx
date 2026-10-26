@@ -31,7 +31,7 @@ const PAGES = [
   { id: 'models', label: 'Models', icon: 'cube', group: 'AI' },
   { id: 'search', label: 'Web search', icon: 'search', group: 'AI' },
   { id: 'skills', label: 'Skills', icon: 'spark', group: 'AI' },
-  { id: 'ecc', label: 'ECC Library', icon: 'spark', group: 'AI' },
+  { id: 'ecc', label: 'Devora Library', icon: 'spark', group: 'AI' },
   { id: 'agents', label: 'Agents', icon: 'bot', group: 'AI' },
   { id: 'apikeys', label: 'API keys', icon: 'key', group: 'API' },
   { id: 'users', label: 'Users', icon: 'user', group: 'Desktop app' },
