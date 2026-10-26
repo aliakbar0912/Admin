@@ -1,7 +1,10 @@
 // Devora Library (the bundled library formerly labelled "ECC"): browse the library (agents, commands, skills,
 // rules, hooks, workflows, contexts) and publish selected items to the organization, so every desktop receives
-// them through the normal org sync (Skills and Agents pages). Agents publish as organization agents; skills,
-// commands and rules publish as organization skills; hooks/workflows/contexts are reference-only.
+// them through the normal org sync (Skills and Agents pages). Every kind converts to a Devora entry: agents
+// publish as organization agents; skills, commands, rules, hooks, workflows and context packs publish as
+// organization skills — commands named "Devora /", rules "Devora Rule /", hooks "Devora Hook /" (guidance
+// checklists), workflows "Devora Workflow /" (phase plans) and contexts "Devora Context /" (operating modes).
+// Nothing in the library is ever executed.
 import { useMemo, useState } from 'react';
 import { api, ApiError } from '../api.ts';
 import { Badge, Button, Card, Notice, Page, Stat, Table, useLoad } from '../ui.tsx';
@@ -119,13 +122,26 @@ export function Ecc() {
     const skills = all ? data.skills.map((s) => s.slug) : [...picked].filter((k) => k.startsWith('skill:')).map((k) => k.slice(6));
     const commands = all ? data.commands.map((c) => c.slug) : [...picked].filter((k) => k.startsWith('command:')).map((k) => k.slice(8));
     const rules = all ? data.rules.map((r) => r.slug) : [...picked].filter((k) => k.startsWith('rule:')).map((k) => k.slice(5));
+    const hooks = all ? data.hooks.map((h) => h.slug) : [...picked].filter((k) => k.startsWith('hook:')).map((k) => k.slice(5));
+    const workflows = all ? data.workflows.map((w) => w.slug) : [...picked].filter((k) => k.startsWith('workflow:')).map((k) => k.slice(9));
+    const contexts = all ? data.contexts.map((c) => c.slug) : [...picked].filter((k) => k.startsWith('context:')).map((k) => k.slice(8));
     try {
-      const res = await api<{ published: { agents: number; skills: number; commands: number; rules: number } }>('POST', '/admin/api/ecc/publish', {
-        ...(all ? { all: true } : { agents, skills, commands, rules }),
+      const res = await api<{ published: { agents: number; skills: number; commands: number; rules: number; hooks: number; workflows: number; contexts: number } }>('POST', '/admin/api/ecc/publish', {
+        ...(all ? { all: true } : { agents, skills, commands, rules, hooks, workflows, contexts }),
       });
+      const p = res.published;
+      const done = [
+        p.agents ? `${p.agents} agents` : '',
+        p.skills ? `${p.skills} skills` : '',
+        p.commands ? `${p.commands} commands` : '',
+        p.rules ? `${p.rules} rules` : '',
+        p.hooks ? `${p.hooks} hooks` : '',
+        p.workflows ? `${p.workflows} workflows` : '',
+        p.contexts ? `${p.contexts} contexts` : '',
+      ].filter(Boolean);
       setMessage({
         kind: 'success',
-        text: `Published ${res.published.agents} agents, ${res.published.skills} skills, ${res.published.commands} commands and ${res.published.rules} rules to the organization. Desktops receive them on their next sync (within about 5 minutes).`,
+        text: `Published ${done.join(', ') || 'nothing'} to the organization. Desktops receive them on their next sync (within about 5 minutes).`,
       });
       setPicked(new Set());
       reload();
@@ -153,7 +169,7 @@ export function Ecc() {
   return (
     <Page
       title="Devora Library"
-      intro={`The bundled Devora library (v${data?.version ?? '—'}) ships with Devora: specialist agent presets, prompt commands, method skills, coding-standard rules, hook metadata, native workflows and context packs. Everything is read-only data; nothing in it runs on its own and it never widens desktop permissions. Publish items to make them organization skills and agents on every desktop.`}
+      intro={`The bundled Devora library (v${data?.version ?? '—'}) ships with Devora: specialist agent presets, prompt commands, method skills, coding-standard rules, hook checklists, workflow plans and context packs. Publish any of them to convert them into organization skills and agents that every desktop receives; hooks and workflows arrive as advisory guidance and nothing in the library ever runs on its own.`}
       actions={
         <>
           <Button onClick={() => void unpublishAll()} disabled={busy}>Remove published</Button>
@@ -176,8 +192,8 @@ export function Ecc() {
             <Stat label="Commands" value={data.counts.commands} hint="prompt templates" />
             <Stat label="Skills" value={data.counts.skills} hint="method notes" />
             <Stat label="Rules" value={data.counts.rules} hint="coding standards" />
-            <Stat label="Hooks" value={data.counts.hooks} hint="reference metadata" />
-            <Stat label="Workflows" value={data.counts.workflows} hint="orchestration scripts" />
+            <Stat label="Hooks" value={data.counts.hooks} hint="checklist guidance" />
+            <Stat label="Workflows" value={data.counts.workflows} hint="phase plans" />
             <Stat label="Contexts" value={data.counts.contexts} hint="operating modes" />
           </div>
 
@@ -282,11 +298,12 @@ export function Ecc() {
             )}
 
             {tab === 'hooks' && (
-              <Table head={['Hook', 'Event', 'What it does']} rows={items.length} empty="No Devora library hooks match.">
+              <Table head={['', 'Hook', 'Event', 'What it does']} rows={items.length} empty="No Devora library hooks match.">
                 {items.map((i) => {
                   const h = i as HookItem;
                   return (
                     <tr key={keyOf(h)}>
+                      <td><input type="checkbox" checked={picked.has(keyOf(h))} onChange={() => toggle(h)} aria-label={`Select ${h.name}`} /></td>
                       <td><strong>{h.name}</strong></td>
                       <td><Badge tone="muted">{h.event}</Badge></td>
                       <td className="small muted">{h.description}</td>
@@ -297,11 +314,12 @@ export function Ecc() {
             )}
 
             {tab === 'workflows' && (
-              <Table head={['Workflow', 'Phases', 'What it does']} rows={items.length} empty="No Devora library workflows match.">
+              <Table head={['', 'Workflow', 'Phases', 'What it does']} rows={items.length} empty="No Devora library workflows match.">
                 {items.map((i) => {
                   const w = i as WorkflowItem;
                   return (
                     <tr key={keyOf(w)}>
+                      <td><input type="checkbox" checked={picked.has(keyOf(w))} onChange={() => toggle(w)} aria-label={`Select ${w.name}`} /></td>
                       <td><strong>{w.name}</strong><div className="small muted">{w.slug}</div></td>
                       <td className="small">{w.phases.join(' → ') || '—'}</td>
                       <td className="small muted">{w.description}</td>
@@ -312,11 +330,12 @@ export function Ecc() {
             )}
 
             {tab === 'contexts' && (
-              <Table head={['Context', 'Purpose']} rows={items.length} empty="No Devora library contexts match.">
+              <Table head={['', 'Context', 'Purpose']} rows={items.length} empty="No Devora library contexts match.">
                 {items.map((i) => {
                   const c = i as ContextItem;
                   return (
                     <tr key={keyOf(c)}>
+                      <td><input type="checkbox" checked={picked.has(keyOf(c))} onChange={() => toggle(c)} aria-label={`Select ${c.name}`} /></td>
                       <td><strong>{c.name}</strong><div className="small muted">{c.slug}</div></td>
                       <td className="small muted">{c.description}</td>
                     </tr>
@@ -326,11 +345,12 @@ export function Ecc() {
             )}
 
             <p className="small muted" style={{ marginTop: 12 }}>
-              Publishing applies to agents, commands, skills and rules: agents become organization agents; commands become organization skills named
-              <code>Devora /</code> (desktops also list every bundled command in their "/" menu out of the box, so publishing is only needed to distribute
-              them to managed desktops as org skills); rules arrive as <code>Devora Rule /</code> skills. Hooks, workflows and context packs are reference
-              data — Devora never executes hook or workflow scripts. Published items use slugs starting with <code>ecc-</code>, so "Remove published" only
-              touches library entries.
+              Publishing converts library items into organization entries: agents become organization agents; skills, commands, rules, hooks, workflows and
+              context packs become organization skills — commands arrive named <code>Devora /</code> (desktops also list every bundled command in their "/"
+              menu out of the box), rules as <code>Devora Rule /</code>, hooks as <code>Devora Hook /</code> (checklist guidance), workflows as
+              <code>Devora Workflow /</code> (phase plans) and context packs as <code>Devora Context /</code> (operating modes). Devora never executes hook
+              or workflow scripts — they are advisory only. Published items use slugs starting with <code>ecc-</code>, so "Remove published" only touches
+              library entries.
             </p>
           </Card>
         </>
