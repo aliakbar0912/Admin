@@ -108,7 +108,7 @@ export function createAdminServer({ apiOrigin: api, hsts = false, apiKey = '' })
     "script-src 'self'",
     "style-src 'self'",
     "img-src 'self' data:",
-    "connect-src 'self'",
+    `connect-src 'self' ${api}`,
     "frame-ancestors 'none'",
     "base-uri 'none'",
     "form-action 'self'",
@@ -147,7 +147,7 @@ export function createAdminServer({ apiOrigin: api, hsts = false, apiKey = '' })
     }
     if (pathname === '/config.js') {
       res.writeHead(200, { ...headers, 'content-type': 'text/javascript; charset=utf-8' });
-      return res.end(`window.__DEVORA_ADMIN_CONFIG__ = ${JSON.stringify({})};\n`);
+      return res.end(`window.__DEVORA_ADMIN_CONFIG__ = ${JSON.stringify({ apiOrigin: api })};\n`);
     }
     const entry = files.get(pathname);
     if (!entry) {

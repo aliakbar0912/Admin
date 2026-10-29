@@ -20,13 +20,13 @@ export interface Model {
   enabled: boolean;
   isDefault: boolean;
   contextWindow: number | null;
-  capabilities: Record<'streaming' | 'tools' | 'vision' | 'reasoning', Capability>;
+  capabilities: Record<'streaming' | 'tools' | 'vision' | 'reasoning' | 'embeddings', Capability>;
   fallbackModelId: string | null;
   source: 'manual' | 'discovered';
   lastListedAt: string | null;
 }
 
-const CAPS = ['streaming', 'tools', 'vision', 'reasoning'] as const;
+const CAPS = ['streaming', 'tools', 'vision', 'reasoning', 'embeddings'] as const;
 
 function capText(c: Capability): string {
   if (c.supported === null) return 'unknown';
@@ -207,7 +207,7 @@ function CapabilityFields(props: { value: Model['capabilities']; onChange: (v: M
           </select>
         </Field>
       ))}
-      <p className="muted small">Choosing a value marks it as set by the admin. Unknown is never treated as supported.</p>
+      <p className="muted small">Choosing a value marks it as set by the admin. Unknown is never treated as supported. Mark <strong>embeddings</strong> only on a model that serves <span className="mono">/embeddings</span>: desktops use it for the @codebase index.</p>
     </fieldset>
   );
 }

@@ -1,12 +1,12 @@
 /* Admin site styles. Colors are tokens on :root, with a dark variant. No remote fonts or scripts. */
 :root {
-  --bg: #f6f7f9;
-  --surface: #ffffff;
-  --surface-2: #f0f2f5;
-  --text: #15171c;
-  --muted: #5d6470;
-  --border: #d9dde4;
-  --accent: #2b5fd9;
+  --bg: #f6f4ee;
+  --surface: #fbfaf6;
+  --surface-2: #efece4;
+  --text: #211f1a;
+  --muted: #6b665b;
+  --border: rgba(33, 31, 26, 0.14);
+  --accent: #5b48d9;
   --accent-text: #ffffff;
   --ok: #17794a;
   --ok-bg: #e4f5ec;
@@ -15,20 +15,20 @@
   --bad: #b3261e;
   --bad-bg: #fbe5e3;
   --radius: 10px;
-  --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.08);
+  --shadow: 0 1px 2px rgba(33, 31, 26, 0.04), 0 1px 3px rgba(33, 31, 26, 0.06);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #0f1116;
-    --surface: #171a21;
-    --surface-2: #1d212a;
-    --text: #e8ebf1;
-    --muted: #9aa3b2;
-    --border: #2a3040;
-    --accent: #6d93f0;
-    --accent-text: #0b0d12;
+    --bg: #161512;
+    --surface: #1f1d19;
+    --surface-2: #27241f;
+    --text: #f4f1ea;
+    --muted: #a49d8e;
+    --border: #37332c;
+    --accent: #a99cf5;
+    --accent-text: #161512;
     --ok: #6fd39a;
     --ok-bg: #16372a;
     --warn: #f1c35b;
@@ -41,14 +41,14 @@
 }
 
 :root[data-theme='dark'] {
-  --bg: #0f1116;
-  --surface: #171a21;
-  --surface-2: #1d212a;
-  --text: #e8ebf1;
-  --muted: #9aa3b2;
-  --border: #2a3040;
-  --accent: #6d93f0;
-  --accent-text: #0b0d12;
+  --bg: #161512;
+  --surface: #1f1d19;
+  --surface-2: #27241f;
+  --text: #f4f1ea;
+  --muted: #a49d8e;
+  --border: #37332c;
+  --accent: #a99cf5;
+  --accent-text: #161512;
   --ok: #6fd39a;
   --ok-bg: #16372a;
   --warn: #f1c35b;
@@ -280,9 +280,9 @@ fieldset { margin: 0; }
 .memory-content { max-width: 560px; overflow-wrap: anywhere; }
 
 /* ---- refreshed shell: grouped navigation with icons, theme switch, owner box ---- */
-:root { --accent-soft: rgba(43, 95, 217, 0.1); }
-:root[data-theme='dark'] { --accent-soft: rgba(109, 147, 240, 0.14); }
-@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) { --accent-soft: rgba(109, 147, 240, 0.14); } }
+:root { --accent-soft: rgba(91, 72, 217, 0.1); }
+:root[data-theme='dark'] { --accent-soft: rgba(169, 156, 245, 0.16); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) { --accent-soft: rgba(169, 156, 245, 0.16); } }
 @media (min-width: 761px) {
   .shell { grid-template-columns: 236px minmax(0, 1fr); }
   .sidebar { position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: 18px 12px; gap: 18px; }
