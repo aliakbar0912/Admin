@@ -2,6 +2,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { api, ApiError, onReauthRequired, onUnauthorized, setCsrf } from './api.ts';
 import { Button, Field, Modal, Notice } from './ui.tsx';
+import { CommandPalette } from './CommandPalette.tsx';
+import type { PaletteItem } from './palette.ts';
 import { Overview } from './pages/Overview.tsx';
 import { Providers } from './pages/Providers.tsx';
 import { Models } from './pages/Models.tsx';
@@ -21,6 +23,7 @@ import { Agents } from './pages/Agents.tsx';
 import { Announcements } from './pages/Announcements.tsx';
 import { AuditLog } from './pages/AuditLog.tsx';
 import { Desktop } from './pages/Desktop.tsx';
+import { System } from './pages/System.tsx';
 import { Icon } from './ui.tsx';
 
 const PAGES = [
@@ -41,6 +44,7 @@ const PAGES = [
   { id: 'desktop', label: 'Desktop config', icon: 'screen', group: 'Desktop app' },
   { id: 'updates', label: 'Updates', icon: 'download', group: 'Desktop app' },
   { id: 'memory', label: 'Memory', icon: 'brain', group: 'Desktop app' },
+  { id: 'system', label: 'System health', icon: 'pulse', group: 'Server' },
   { id: 'settings', label: 'Settings', icon: 'sliders', group: 'Server' },
   { id: 'audit', label: 'Audit log', icon: 'shield', group: 'Server' },
 ] as const;
@@ -66,7 +70,8 @@ function applyTheme(t: Theme) {
 type PageId = (typeof PAGES)[number]['id'];
 
 function currentPage(): PageId {
-  const id = window.location.hash.replace(/^#\/?/, '') as PageId;
+  // The hash may carry a query (#/audit?action=provider.test) for deep links into a filtered page.
+  const id = window.location.hash.replace(/^#\/?/, '').split('?')[0] as PageId;
   return PAGES.some((p) => p.id === id) ? id : 'overview';
 }
 
@@ -77,7 +82,21 @@ export function App() {
   const [page, setPage] = useState<PageId>(currentPage());
   const [reauth, setReauth] = useState<{ resolve: (ok: boolean) => void } | null>(null);
   const [theme, setTheme] = useState<Theme>(loadTheme());
+  const [palette, setPalette] = useState(false);
   useEffect(() => applyTheme(theme), [theme]);
+
+  // Ctrl/Cmd+K opens the palette from anywhere in the signed-in app.
+  useEffect(() => {
+    if (session.status !== 'in') return;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPalette((open) => !open);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [session.status]);
 
   useEffect(() => {
     const onHash = () => setPage(currentPage());
@@ -108,6 +127,17 @@ export function App() {
     window.location.hash = `#/${id}`;
   };
 
+  const items: PaletteItem[] = [
+    ...PAGES.map((p) => ({ id: `page:${p.id}`, label: p.label, group: p.group, icon: p.icon, keywords: `go open ${p.id}` })),
+    { id: 'action:theme', label: `Change theme (now: ${theme})`, group: 'Actions', icon: 'sun', keywords: 'appearance dark light system' },
+    { id: 'action:signout', label: 'Sign out', group: 'Actions', icon: 'user', keywords: 'log out leave' },
+  ];
+  const runItem = (id: string) => {
+    if (id.startsWith('page:')) go(id.slice(5) as PageId);
+    else if (id === 'action:theme') setTheme(theme === 'system' ? 'light' : theme === 'light' ? 'dark' : 'system');
+    else if (id === 'action:signout') void signOut(() => setSession({ status: 'out' }));
+  };
+
   return (
     <div className="shell">
       <aside className="sidebar">
@@ -115,6 +145,11 @@ export function App() {
           <span className="brand-mark" aria-hidden="true">D</span>
           <span>Devora admin</span>
         </div>
+        <button className="palette-trigger" onClick={() => setPalette(true)} aria-label="Jump to a page or action (Ctrl+K)">
+          <Icon name="search" />
+          <span>Jump to…</span>
+          <kbd>Ctrl K</kbd>
+        </button>
         <nav aria-label="Main">
           {GROUPS.map((g) => (
             <div key={g} className="nav-group">
@@ -163,6 +198,7 @@ export function App() {
         {page === 'devices' && <Devices />}
         {page === 'desktop' && <Desktop />}
         {page === 'memory' && <Memory />}
+        {page === 'system' && <System />}
         {page === 'brain' && <Brain />}
         {page === 'usage' && <Usage />}
         {page === 'updates' && <Updates />}
@@ -170,6 +206,7 @@ export function App() {
         {page === 'audit' && <AuditLog />}
       </main>
       {reauth && <ReauthDialog onDone={(ok) => { reauth.resolve(ok); setReauth(null); }} />}
+      {palette && <CommandPalette items={items} onRun={runItem} onClose={() => setPalette(false)} />}
     </div>
   );
 }

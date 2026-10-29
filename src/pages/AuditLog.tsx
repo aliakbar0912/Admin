@@ -1,7 +1,7 @@
 // The owner's audit log: who changed what in this admin site, when. Entries are recorded automatically for every
 // sensitive write (settings, providers, models, devices, users, releases, agents, skills, API keys, announcements).
 // The log is read-only here; it is kept for the same retention window as the request logs and pruned automatically.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api, ago, when } from '../api.ts';
 import { Badge, Button, Field, Notice, Page, Table, useLoad } from '../ui.tsx';
 
@@ -32,9 +32,20 @@ function targetLabel(entry: AuditEntry): string {
   return `${what} — ${verb}`;
 }
 
+/** Deep links such as #/audit?action=provider.test open the page with the filter already applied. */
+function actionFromHash(): string {
+  const q = window.location.hash.split('?')[1] ?? '';
+  return new URLSearchParams(q).get('action') ?? '';
+}
+
 export function AuditLog() {
-  const [action, setAction] = useState('');
+  const [action, setAction] = useState(actionFromHash);
   const [limit, setLimit] = useState(50);
+  useEffect(() => {
+    const sync = () => setAction(actionFromHash());
+    window.addEventListener('hashchange', sync);
+    return () => window.removeEventListener('hashchange', sync);
+  }, []);
   const { data, error, loading, reload } = useLoad<{ entries: AuditEntry[]; nextCursor: string | null }>(
     () => api('GET', `/admin/api/audit?limit=${Math.min(limit, 200)}${action ? `&action=${encodeURIComponent(action)}` : ''}`),
     [action, limit],

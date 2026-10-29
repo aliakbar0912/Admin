@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { ago, api, when } from '../api.ts';
 import { Badge, Card, Page, Spinner, Stat, useLoad } from '../ui.tsx';
 
@@ -37,8 +38,43 @@ export function Overview() {
   const failures = useLoad<{ logs: { id: number; createdAt: string; deviceName: string | null; modelName: string; errorCode: string | null; httpStatus: number }[] }>(() => api('GET', '/admin/api/logs?status=error&limit=5'));
   const latest = releases.data?.releases.find((r) => r.status === 'published') ?? null;
   const total = releases.data?.adoption.reduce((n, a) => n + a.devices, 0) ?? 0;
+
+  // The overview is the page owners leave open, so it refreshes itself while the tab is visible.
+  const [auto, setAuto] = useState(true);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const refreshAll = () => {
+    reload();
+    health.reload();
+    releases.reload();
+    failures.reload();
+  };
+  const refreshAllRef = useRef(refreshAll);
+  refreshAllRef.current = refreshAll;
+  useEffect(() => {
+    if (!auto) return;
+    const t = setInterval(() => {
+      if (document.visibilityState === 'visible') refreshAllRef.current();
+    }, 30_000);
+    return () => clearInterval(t);
+  }, [auto]);
+  useEffect(() => {
+    if (data) setUpdatedAt(new Date().toISOString());
+  }, [data]);
+
   return (
-    <Page title="Overview" intro="Live status of the central service. Figures cover the last 24 hours." actions={<button className="btn btn-secondary" onClick={() => { reload(); health.reload(); releases.reload(); failures.reload(); }}>Refresh</button>}>
+    <Page
+      title="Overview"
+      intro="Live status of the central service. Figures cover the last 24 hours."
+      actions={
+        <>
+          <label className="check" title="Reload every 30 seconds while this tab is visible">
+            <input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} /> Auto-refresh
+          </label>
+          {updatedAt && <span className="muted small">updated {when(updatedAt)}</span>}
+          <button className="btn btn-secondary" onClick={refreshAll}>Refresh now</button>
+        </>
+      }
+    >
       {loading && !data && <Spinner />}
       {error && <p className="notice notice-error" role="alert">{error}</p>}
       {data && (

@@ -39,6 +39,7 @@ export function Models() {
   const [q, setQ] = useState('');
   const [editing, setEditing] = useState<Model | null>(null);
   const [adding, setAdding] = useState(false);
+  const [bulk, setBulk] = useState<'enable' | 'disable' | null>(null);
   const [message, setMessage] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
   const params = new URLSearchParams();
   if (providerId) params.set('providerId', providerId);
@@ -58,11 +59,46 @@ export function Models() {
     }
   };
 
+  // Bulk actions act on the rows the current filters show. Enabling skips models on a disabled provider,
+  // because the API refuses to enable those (the desktop would never receive them anyway).
+  const shownModels = models.data?.models ?? [];
+  const bulkTargets = bulk === 'enable' ? shownModels.filter((m) => !m.enabled && m.providerEnabled) : shownModels.filter((m) => m.enabled);
+  const skipped = bulk === 'enable' ? shownModels.filter((m) => !m.enabled && !m.providerEnabled).length : 0;
+  const runBulk = async () => {
+    const targets = bulkTargets;
+    const enabling = bulk === 'enable';
+    setBulk(null);
+    setMessage(null);
+    let done = 0;
+    let firstError = '';
+    for (const m of targets) {
+      try {
+        await api('PATCH', `/admin/api/models/${m.id}`, { enabled: enabling });
+        done++;
+      } catch (e) {
+        if (!firstError) firstError = `${m.displayName}: ${e instanceof ApiError ? e.message : 'the change failed'}`;
+      }
+    }
+    const failedCount = targets.length - done;
+    setMessage(
+      failedCount
+        ? { kind: 'error', text: `${done} model(s) updated, ${failedCount} failed. First error — ${firstError}` }
+        : { kind: 'success', text: `${done} model(s) ${enabling ? 'enabled' : 'disabled'}.` },
+    );
+    models.reload();
+  };
+
   return (
     <Page
       title="Models"
       intro="Only enabled models on enabled providers reach desktop users. Capabilities default to unknown; set them only when you know them. Unknown means the desktop will not assume the feature."
-      actions={<Button variant="primary" onClick={() => setAdding(true)}>Add model</Button>}
+      actions={
+        <>
+          <Button disabled={!shownModels.some((m) => !m.enabled && m.providerEnabled)} onClick={() => setBulk('enable')}>Enable shown</Button>
+          <Button disabled={!shownModels.some((m) => m.enabled)} onClick={() => setBulk('disable')}>Disable shown</Button>
+          <Button variant="primary" onClick={() => setAdding(true)}>Add model</Button>
+        </>
+      }
     >
       <div className="filters">
         <Field label="Provider">
@@ -156,6 +192,30 @@ export function Models() {
             models.reload();
           }}
         />
+      )}
+      {bulk && (
+        <Modal title={bulk === 'enable' ? 'Enable the models shown?' : 'Disable the models shown?'} onClose={() => setBulk(null)}>
+          <p>
+            {bulkTargets.length === 0 ? (
+              <>There is nothing to change in the current filter.</>
+            ) : (
+              <>
+                This {bulk === 'enable' ? 'enables' : 'disables'} <strong>{bulkTargets.length} model(s)</strong>
+                {providerId || enabled || q ? ' among the rows the current filters show.' : ' — every model in the catalogue.'}
+              </>
+            )}
+          </p>
+          {bulk === 'enable' && skipped > 0 && (
+            <p className="muted small">{skipped} model(s) on a disabled provider will be skipped; enable the provider first.</p>
+          )}
+          {bulk === 'disable' && <p className="muted small">Desktop users lose these models immediately. Requests in flight are not affected.</p>}
+          <div className="form-actions">
+            <Button onClick={() => setBulk(null)}>Cancel</Button>
+            <Button variant={bulk === 'disable' ? 'danger' : 'primary'} disabled={bulkTargets.length === 0} onClick={() => void runBulk()}>
+              {bulk === 'enable' ? `Enable ${bulkTargets.length}` : `Disable ${bulkTargets.length}`}
+            </Button>
+          </div>
+        </Modal>
       )}
     </Page>
   );
